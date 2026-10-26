@@ -35,12 +35,15 @@ async function enterDossier(page: Page) {
   await expect(page.locator('#profile')).toBeInViewport({ timeout: 3000 });
 }
 
-/** Scroll a section into view and let its whileInView reveal finish. */
+/**
+ * Scroll a section into view and wait until its whileInView reveal has finished.
+ * Playwright counts opacity 0 as visible, so the end of the fade is asserted explicitly.
+ */
 async function reveal(page: Page, id: string) {
   const section = page.locator(`#${id}`);
   await section.scrollIntoViewIfNeeded();
   await section.evaluate((el) => el.scrollIntoView({ block: 'start' }));
-  await page.waitForTimeout(900);
+  await expect(section, `#${id} revealed`).toHaveCSS('opacity', '1');
   return section;
 }
 
@@ -253,6 +256,41 @@ test.describe('operations', () => {
     await backdrop.click({ position: { x, y: 400 } });
     await expectCaseFileGone(page, trigger);
   });
+});
+
+/**
+ * Short phone screens: a section far taller than the viewport (Operations runs ~7500px on a
+ * phone) must still reveal when it is scrolled through, so nothing stays at opacity 0.
+ * Runs in the mobile project only (touch emulation), at sizes below its 375×812 default.
+ */
+test.describe('scroll reveal on short phones', () => {
+  const sizes = [
+    { width: 360, height: 560, lang: 'en' },
+    { width: 320, height: 568, lang: 'en' },
+    { width: 360, height: 616, lang: 'id' },
+  ] as const;
+
+  for (const { width, height, lang } of sizes) {
+    test.describe(`${width}×${height} (${lang})`, () => {
+      test.use({ viewport: { width, height } });
+
+      test('every section reaches opacity 1 after scrolling through the page', async ({ page }, info) => {
+        test.skip(info.project.name !== 'mobile', 'phone sizes run in the mobile project');
+        await enterDossier(page);
+        if (lang === 'id') await page.getByRole('button', { name: 'ID', exact: true }).click();
+        // Step down the page like a reader would, never jumping a section into view.
+        const total = await page.evaluate(() => document.documentElement.scrollHeight);
+        const step = Math.floor(height * 0.6);
+        for (let y = 0; y <= total; y += step) {
+          await page.mouse.wheel(0, step);
+          await page.waitForTimeout(60);
+        }
+        for (const id of SECTION_IDS) {
+          await expect(page.locator(`#${id}`), `#${id} revealed`).toHaveCSS('opacity', '1');
+        }
+      });
+    });
+  }
 });
 
 test.describe('layout', () => {

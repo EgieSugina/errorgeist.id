@@ -63,7 +63,9 @@ export function DossierSection({ id, labelledBy, children }: Props) {
   const motionProps = !canObserve
     ? {}
     : {
-        viewport: { once: true, amount: 0.08 },
+        // Any intersection reveals: a fractional amount of a very tall section (Operations is
+        // ~7500px on a phone) can be more than a short screen ever shows at once.
+        viewport: { once: true, amount: 'some' as const },
         ...(reduce
           ? {
               initial: { opacity: 0 },
