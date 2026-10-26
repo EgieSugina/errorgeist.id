@@ -1,5 +1,5 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../../src/App';
 
 const originalMatchMedia = window.matchMedia;
@@ -29,22 +29,31 @@ function setReducedMotion(reduce: boolean) {
 
 const dossierHeading = () => screen.queryByRole('heading', { level: 1, name: 'Egie Sugina' });
 
-/** React batches state inside one act(), so step the clock in small slices like a real browser. */
-function advance(ms: number) {
+/**
+ * React batches state inside one act(), so step the clock in small slices like a real browser.
+ * Async act also flushes microtasks, which lets the React.lazy fx chunks resolve.
+ */
+async function advance(ms: number) {
   for (let t = 0; t < ms; t += 50) {
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(50);
     });
   }
 }
 
-function skipAndSettle() {
+async function skipAndSettle() {
   act(() => {
     fireEvent.keyDown(window, { key: 'x' });
   });
-  // Task 8 swaps the transition for ~900 ms; stay safely above both.
-  advance(1500);
+  // The CRT transition runs ~900 ms; stay safely above it.
+  await advance(1500);
 }
+
+// Warm the lazy fx modules so React.lazy resolves within a microtask flush.
+beforeAll(async () => {
+  await import('../../src/features/fx/CrtTransition');
+  await import('../../src/features/fx/GrainBackdrop');
+});
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
@@ -63,21 +72,21 @@ afterEach(() => {
 });
 
 describe('App phase machine', () => {
-  it('starts at the boot terminal with empty storage, then reaches the dossier after a skip', () => {
+  it('starts at the boot terminal with empty storage, then reaches the dossier after a skip', async () => {
     const { container } = render(<App />);
     expect(screen.getByText(/SECURE TERMINAL/)).toBeInTheDocument();
     expect(dossierHeading()).not.toBeInTheDocument();
 
-    skipAndSettle();
+    await skipAndSettle();
     expect(screen.queryByText(/SECURE TERMINAL/)).not.toBeInTheDocument();
     expect(container.querySelector('#profile')).toBeInTheDocument();
     expect(dossierHeading()).toBeInTheDocument();
     expect(window.sessionStorage.getItem('egs.bootSeen')).toBe('1');
   });
 
-  it('reaches the dossier on its own when the boot sequence completes', () => {
+  it('reaches the dossier on its own when the boot sequence completes', async () => {
     const { container } = render(<App />);
-    advance(6000);
+    await advance(6000);
     expect(container.querySelector('#profile')).toBeInTheDocument();
   });
 
@@ -90,7 +99,7 @@ describe('App phase machine', () => {
     expect(dossierHeading()).not.toBeInTheDocument();
   });
 
-  it('presses during the transition do not restart or double-advance it', () => {
+  it('presses during the transition do not restart or double-advance it', async () => {
     const { container } = render(<App />);
     act(() => {
       fireEvent.keyDown(window, { key: 'x' });
@@ -99,7 +108,7 @@ describe('App phase machine', () => {
       fireEvent.keyDown(window, { key: 'y' });
       fireEvent.pointerDown(window);
     });
-    advance(1500);
+    await advance(1500);
     expect(container.querySelector('#profile')).toBeInTheDocument();
     expect(screen.queryByText(/SECURE TERMINAL/)).not.toBeInTheDocument();
   });
@@ -118,7 +127,7 @@ describe('App phase machine', () => {
     expect(screen.queryByText(/SECURE TERMINAL/)).not.toBeInTheDocument();
   });
 
-  it('still boots and reaches the dossier when storage throws', () => {
+  it('still boots and reaches the dossier when storage throws', async () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
@@ -130,7 +139,7 @@ describe('App phase machine', () => {
     });
     const { container } = render(<App />);
     expect(screen.getByText(/SECURE TERMINAL/)).toBeInTheDocument();
-    skipAndSettle();
+    await skipAndSettle();
     expect(container.querySelector('#profile')).toBeInTheDocument();
   });
 
@@ -141,6 +150,21 @@ describe('App phase machine', () => {
     expect(window.sessionStorage.getItem('egs.bootSeen')).toBeNull();
     expect(screen.getByText(/SECURE TERMINAL/)).toBeInTheDocument();
     expect(dossierHeading()).not.toBeInTheDocument();
+  });
+
+  it('replay boot under reduced motion ends in an opacity fade, not the CRT power-off', async () => {
+    setReducedMotion(true);
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /replay boot/i }));
+    act(() => {
+      fireEvent.keyDown(window, { key: 'x' });
+    });
+    await advance(50);
+    expect(container.querySelector('[data-fx="crt-fade"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-fx="crt-css"], [data-fx="crt-webgl"]')).not.toBeInTheDocument();
+    await advance(400);
+    expect(container.querySelector('[data-fx^="crt"]')).not.toBeInTheDocument();
+    expect(dossierHeading()).toBeInTheDocument();
   });
 
   it('renders the dossier with StyleX-compiled styles', () => {

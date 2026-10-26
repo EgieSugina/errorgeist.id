@@ -17,3 +17,9 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
     }),
   });
 }
+
+// jsdom has no canvas backend: getContext() already returns null but logs a
+// "Not implemented" error on every call. Return null quietly (same behaviour).
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = (() => null) as HTMLCanvasElement['getContext'];
+}

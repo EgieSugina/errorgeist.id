@@ -19,7 +19,8 @@ const styles = stylex.create({
     overflowX: 'clip',
     color: colors.ink,
     fontFamily: fonts.typewriter,
-    backgroundColor: colors.desk,
+    // No background colour: the desk colour sits on <body> so the fixed GrainBackdrop
+    // (z-index -1) shows through between the files. The lamp gradients stay translucent.
     // Lamp-lit desk: warm pool of light top-left, falling off to the edges.
     backgroundImage:
       'radial-gradient(ellipse 90% 60% at 25% 0%, rgba(58,50,38,0.55), transparent 70%), radial-gradient(ellipse 70% 50% at 90% 100%, rgba(43,36,26,0.4), transparent 70%)',

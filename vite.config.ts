@@ -12,5 +12,15 @@ export default defineConfig({
     }),
     react(),
   ],
-  build: { sourcemap: false },
+  build: {
+    sourcemap: false,
+    rolldownOptions: {
+      output: {
+        // three.js gets its own named chunk; only the lazy fx modules import it.
+        codeSplitting: { groups: [{ name: 'three', test: /[\\/]node_modules[\\/]three[\\/]/ }] },
+      },
+    },
+    // The three chunk is ~520 kB minified (~130 kB gzip) and never on the initial load.
+    chunkSizeWarningLimit: 600,
+  },
 });
