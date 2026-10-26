@@ -78,15 +78,36 @@ function horizontalOverflow(root: Locator) {
   });
 }
 
-/** Open the HIVEMIND case file, check it, close it with Escape and check it is really gone. */
-async function openCloseCaseFile(page: Page) {
-  const trigger = page.getByRole('button', { name: /HIVEMIND/ });
+/**
+ * horizontalOverflow() deliberately skips everything inside an internally scrolling container,
+ * so those containers are checked here directly: every element under `root` (and root itself)
+ * that scrolls (overflow-x auto|scroll, which `overflow-y: auto` also computes to) must not
+ * have content wider than its own box. `count` lets callers prove the check was not vacuous.
+ */
+function scrollerOverflow(root: Locator) {
+  return root.evaluate((rootEl) => {
+    const wide: string[] = [];
+    let count = 0;
+    for (const el of [rootEl, ...rootEl.querySelectorAll('*')]) {
+      const cs = getComputedStyle(el);
+      if (cs.overflowX !== 'auto' && cs.overflowX !== 'scroll') continue;
+      count++;
+      if (el.scrollWidth > el.clientWidth) {
+        wide.push(`${el.tagName.toLowerCase()} scrollWidth=${el.scrollWidth} clientWidth=${el.clientWidth}`);
+      }
+    }
+    return { count, wide };
+  });
+}
+
+/** Open a case file from its card button and check the dialog fits the viewport. */
+async function openCaseFile(page: Page, trigger: Locator) {
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('heading', { level: 2 })).toContainText('HIVEMIND');
+  await expect(dialog.getByRole('heading', { level: 2 })).toBeVisible();
   await expect(dialog).toHaveAttribute('aria-modal', 'true');
 
   // The panel never animates its own box, but poll anyway so a settling layout can't flake.
@@ -97,9 +118,21 @@ async function openCloseCaseFile(page: Page) {
       return !!box && box.x >= 0 && box.y >= 0 && box.x + box.width <= vp.width && box.y + box.height <= vp.height;
     })
     .toBe(true);
+  // The body sits in a scrolling container, which horizontalOverflow() skips: check it directly.
+  // The open animation briefly over-measures the content (seen as 18px at 1280 wide), so wait
+  // for it to settle; the settled state is what has to fit.
+  expect((await scrollerOverflow(dialog)).count, 'dialog has a scroll container').toBeGreaterThan(0);
+  await expect
+    .poll(async () => (await scrollerOverflow(dialog)).wide, {
+      message: 'dialog scroll containers wider than their box',
+    })
+    .toEqual([]);
   expect(await horizontalOverflow(dialog)).toEqual([]);
+  return dialog;
+}
 
-  await page.keyboard.press('Escape');
+/** After closing: the role drops at once, then the whole overlay unmounts. */
+async function expectCaseFileGone(page: Page, trigger: Locator) {
   // Closing drops the dialog role at once; the node itself outlives the exit animation.
   await expect(page.getByRole('dialog')).toHaveCount(0);
   // After the exit animation nothing of the file may stay in the DOM.
@@ -108,6 +141,15 @@ async function openCloseCaseFile(page: Page) {
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
   // Focus goes back to the card that opened it.
   await expect(trigger).toBeFocused();
+}
+
+/** Open the HIVEMIND case file, check it, close it with Escape and check it is really gone. */
+async function openCloseCaseFile(page: Page) {
+  const trigger = page.getByRole('button', { name: /HIVEMIND/ });
+  const dialog = await openCaseFile(page, trigger);
+  await expect(dialog.getByRole('heading', { level: 2 })).toContainText('HIVEMIND');
+  await page.keyboard.press('Escape');
+  await expectCaseFileGone(page, trigger);
 }
 
 test.describe('boot and phases', () => {
@@ -179,14 +221,35 @@ test.describe('operations', () => {
     await openCloseCaseFile(page);
   });
 
-  test('clicking the backdrop also closes the case file', async ({ page }) => {
+  test('every case file opens, fits and closes (all 15)', async ({ page }) => {
+    // 15 open/close round trips of ~1.5 s each; the default 30 s is too tight under parallel load.
+    test.slow();
     await enterDossier(page);
     await reveal(page, 'operations');
-    await page.getByRole('button', { name: /HIVEMIND/ }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await page.getByRole('button', { name: /close file/i }).click();
-    await expect(page.getByRole('dialog')).toHaveCount(0);
-    await expect(page.getByTestId('casefile-backdrop')).toHaveCount(0);
+    const buttons = page.locator('#operations article button[aria-haspopup="dialog"]');
+    await expect(buttons).toHaveCount(15);
+    for (let i = 0; i < 15; i++) {
+      const trigger = buttons.nth(i);
+      await openCaseFile(page, trigger);
+      await page.keyboard.press('Escape');
+      await expectCaseFileGone(page, trigger);
+    }
+  });
+
+  test('clicking the backdrop closes the case file', async ({ page }, info) => {
+    // On phones the panel fills the screen, so there is no backdrop area to click.
+    test.skip(info.project.name === 'mobile', 'panel is full-screen on phones');
+    await enterDossier(page);
+    await reveal(page, 'operations');
+    const trigger = page.getByRole('button', { name: /HIVEMIND/ });
+    await openCaseFile(page, trigger);
+    const panel = (await page.getByRole('dialog').boundingBox())!;
+    const backdrop = page.getByTestId('casefile-backdrop');
+    // A point left of the panel is on the backdrop, not on the panel.
+    const x = Math.floor(panel.x / 2);
+    expect(x).toBeGreaterThan(0);
+    await backdrop.click({ position: { x, y: 400 } });
+    await expectCaseFileGone(page, trigger);
   });
 });
 
@@ -205,6 +268,11 @@ test.describe('layout', () => {
       if (mobile) expect(page.viewportSize()!.width).toBe(375);
     }
     expect(await horizontalOverflow(page.locator('header'))).toEqual([]);
+    // SectionTabs scrolls internally (its children are skipped above), so test the scroller itself.
+    const tabs = page.getByRole('navigation', { name: 'Dossier sections' });
+    const box = (await tabs.boundingBox())!;
+    expect(box.x, 'section tabs left').toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width, 'section tabs right').toBeLessThanOrEqual(page.viewportSize()!.width);
   });
 
   test('every case card fits the viewport width', async ({ page }) => {
