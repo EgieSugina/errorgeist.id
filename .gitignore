@@ -6,3 +6,8 @@ docs/
 test-results/
 playwright-report/
 .vercel/
+
+# Local env files and Claude Code state (launch.json is shared).
+.env*
+.claude/*
+!.claude/launch.json

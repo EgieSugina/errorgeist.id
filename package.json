@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build && node scripts/check-leaks.mjs",
     "e2e": "playwright test",
-    "blocklist:env": "node scripts/print-blocklist-env.mjs"
+    "blocklist:env": "node scripts/print-blocklist-env.mjs",
+    "leak:tree": "node scripts/check-tree-leaks.mjs",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "@stylexjs/stylex": "^0.19.1",

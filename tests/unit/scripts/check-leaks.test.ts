@@ -7,6 +7,7 @@ import {
   findLeaks,
   loadBlocklist,
   parseBlocklistText,
+  resolveBlocklist,
   scanForLeaks,
 } from '../../../scripts/check-leaks.mjs';
 
@@ -48,6 +49,19 @@ describe('scanForLeaks', () => {
     expect(scanForLeaks(dir, ['foo'])).toEqual([]);
   });
 
+  it('reports a term in the relative file path, even when the content is clean', () => {
+    mkdirSync(join(dir, 'assets'));
+    writeFileSync(join(dir, 'assets', 'zorblax-notes.txt'), 'nothing to see');
+    expect(scanForLeaks(dir, ['zorblax'])).toEqual([
+      { file: 'assets/zorblax-notes.txt', term: 'zorblax', inPath: true },
+    ]);
+  });
+
+  it('checks the path of binary files too', () => {
+    writeFileSync(join(dir, 'zorblax.png'), 'binary');
+    expect(scanForLeaks(dir, ['zorblax'])).toEqual([{ file: 'zorblax.png', term: 'zorblax', inPath: true }]);
+  });
+
   it('reports any .map file as a sourcemap leak', () => {
     writeFileSync(join(dir, 'x.js.map'), '{}');
     expect(scanForLeaks(dir, ['zorblax'])).toEqual([{ file: 'x.js.map', term: '<sourcemap>' }]);
@@ -69,6 +83,35 @@ describe('loadBlocklist', () => {
     const p = join(dir, 'bl');
     writeFileSync(p, '# c\n zorblax \n\ntwo words\n');
     expect(loadBlocklist(p)).toEqual(['zorblax', 'two words']);
+  });
+});
+
+describe('resolveBlocklist', () => {
+  it('prefers non-blank LEAK_BLOCKLIST_TERMS over the file', () => {
+    const p = join(dir, 'bl');
+    writeFileSync(p, 'fromfile\n');
+    expect(resolveBlocklist({ LEAK_BLOCKLIST_TERMS: 'zorblax, quux' }, p)).toEqual({
+      terms: ['zorblax', 'quux'],
+      source: 'env',
+    });
+  });
+
+  it('falls back to LEAK_BLOCKLIST, then the default path, when the env value is blank', () => {
+    const p = join(dir, 'bl');
+    writeFileSync(p, 'zorblax\n');
+    expect(resolveBlocklist({ LEAK_BLOCKLIST_TERMS: '  ' }, p)).toEqual({ terms: ['zorblax'], source: 'file' });
+    expect(resolveBlocklist({ LEAK_BLOCKLIST: p }, join(dir, 'nope'))).toEqual({
+      terms: ['zorblax'],
+      source: 'file',
+    });
+  });
+
+  it('throws (fail-closed) when neither source exists, naming the env alternative', () => {
+    expect(() => resolveBlocklist({}, join(dir, 'nope'))).toThrow(/leak blocklist missing.*LEAK_BLOCKLIST_TERMS/);
+  });
+
+  it('throws when the env value parses to zero terms', () => {
+    expect(() => resolveBlocklist({ LEAK_BLOCKLIST_TERMS: ' , \n# c' }, join(dir, 'nope'))).toThrow(/empty/);
   });
 });
 
@@ -133,6 +176,14 @@ describe('check-leaks CLI (fail-closed)', () => {
       const r = runCli(missing(), 'zorblax,quux');
       expect(r.status).toBe(1);
       expect(r.stderr).toMatch(/leak: a\.js: zorblax/);
+    });
+
+    it('fails and names the file when only its path contains the term', () => {
+      mkdirSync(join(dir, 'dist'));
+      writeFileSync(join(dir, 'dist', 'zorblax.js'), 'ok');
+      const r = runCli(missing(), 'zorblax');
+      expect(r.status).toBe(1);
+      expect(r.stderr).toMatch(/leak: zorblax\.js \(path\): zorblax/);
     });
 
     it('fails closed when the env value parses to zero terms', () => {

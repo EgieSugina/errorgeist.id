@@ -5,7 +5,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const BINARY_EXT = /\.(png|jpe?g|woff2)$/i;
+/** Files whose bytes are not scanned (their paths still are). */
+export const BINARY_EXT = /\.(png|jpe?g|woff2)$/i;
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -39,11 +40,16 @@ function walk(dir) {
   });
 }
 
-/** @param {string} distDir @param {string[]} terms */
+/**
+ * Every term hit in `distDir`: in a file's relative path (`inPath: true`) or its contents.
+ * Any `.map` file is a hit on its own.
+ * @param {string} distDir @param {string[]} terms
+ */
 export function scanForLeaks(distDir, terms) {
   const hits = [];
   for (const abs of walk(distDir)) {
     const file = relative(distDir, abs).split(sep).join('/');
+    for (const term of findLeaks(file, terms)) hits.push({ file, term, inPath: true });
     if (file.endsWith('.map')) {
       hits.push({ file, term: '<sourcemap>' });
       continue;
@@ -54,15 +60,24 @@ export function scanForLeaks(distDir, terms) {
   return hits;
 }
 
-/** Terms from env LEAK_BLOCKLIST_TERMS when set and non-blank, else from the blocklist file. */
-function resolveBlocklist() {
-  const fromEnv = process.env.LEAK_BLOCKLIST_TERMS;
+/** One line per hit, as printed by the CLIs. @param {{ file: string, term: string, inPath?: boolean }} hit */
+export function formatHit(hit) {
+  return `leak: ${hit.file}${hit.inPath ? ' (path)' : ''}: ${hit.term}`;
+}
+
+/**
+ * Terms from `LEAK_BLOCKLIST_TERMS` when set and non-blank, else from the file at
+ * `LEAK_BLOCKLIST` (default `defaultPath`). Throws when neither yields any term.
+ * @param {Record<string, string | undefined>} [env] @param {string} [defaultPath]
+ */
+export function resolveBlocklist(env = process.env, defaultPath = '.leak-blocklist') {
+  const fromEnv = env.LEAK_BLOCKLIST_TERMS;
   if (fromEnv !== undefined && fromEnv.trim() !== '') {
     const terms = parseBlocklistText(fromEnv);
     if (terms.length === 0) throw new Error('leak blocklist empty: LEAK_BLOCKLIST_TERMS');
     return { terms, source: 'env' };
   }
-  const path = process.env.LEAK_BLOCKLIST ?? '.leak-blocklist';
+  const path = env.LEAK_BLOCKLIST ?? defaultPath;
   try {
     return { terms: loadBlocklist(path), source: 'file' };
   } catch (err) {
@@ -80,7 +95,7 @@ function main() {
     if (!existsSync(distDir)) throw new Error(`leak check: ${distDir}/ not found`);
     const hits = scanForLeaks(distDir, terms);
     if (hits.length > 0) {
-      for (const h of hits) console.error(`leak: ${h.file}: ${h.term}`);
+      for (const h of hits) console.error(formatHit(h));
       console.error(`leak check: FAILED (${hits.length} hits)`);
       process.exit(1);
     }

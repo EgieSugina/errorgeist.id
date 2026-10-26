@@ -1,0 +1,4 @@
+#!/bin/sh
+# Block a push when a tracked file, file path or unpushed commit message carries a
+# blocklisted term. Calls node directly: pnpm 12 has no -s/--silent flag.
+exec node scripts/check-tree-leaks.mjs

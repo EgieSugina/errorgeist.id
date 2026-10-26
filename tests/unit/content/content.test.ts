@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
-import { findLeaks, loadBlocklist } from '../../../scripts/check-leaks.mjs';
+import { findLeaks, resolveBlocklist } from '../../../scripts/check-leaks.mjs';
 import { profile } from '../../../src/content/profile';
 import { experience } from '../../../src/content/experience';
 import { education } from '../../../src/content/education';
@@ -9,7 +9,9 @@ import { archive, operations, operationsCount } from '../../../src/content/opera
 import { bootLines } from '../../../src/content/boot';
 import { sections, ui } from '../../../src/content/ui';
 
+// Same resolution as the CLI: LEAK_BLOCKLIST_TERMS when set, else the git-ignored file.
 const BLOCKLIST_PATH = resolve(__dirname, '../../../.leak-blocklist');
+const blocklist = () => resolveBlocklist(process.env, BLOCKLIST_PATH).terms;
 
 // Every bilingual content module, including the page chrome in content/ui.ts.
 const everything = { profile, experience, education, arsenal, operations, archive, sections, ui };
@@ -232,12 +234,12 @@ describe('boot', () => {
 });
 
 describe('confidentiality', () => {
-  it('loads the blocklist (fails, never skips, when absent)', () => {
-    expect(() => loadBlocklist(BLOCKLIST_PATH)).not.toThrow();
+  it('loads the blocklist from env or file (fails, never skips, when neither exists)', () => {
+    expect(() => blocklist()).not.toThrow();
   });
 
   it('no blocklist term appears in the serialized content', () => {
-    const terms = loadBlocklist(BLOCKLIST_PATH);
+    const terms = blocklist();
     const serialized = JSON.stringify({
       ...everything,
       boot: [bootLines('en', 42), bootLines('id', 42)],
