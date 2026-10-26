@@ -1,0 +1,7 @@
+node_modules/
+dist/
+docs/
+.superpowers/
+.leak-blocklist
+test-results/
+playwright-report/
