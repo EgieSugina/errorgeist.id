@@ -6,7 +6,6 @@ import { CrtTransition } from './features/fx/CrtTransition';
 import { GrainBackdrop } from './features/fx/GrainBackdrop';
 import { loadCrtRenderer, loadGrainRenderer, webglFxEnabled } from './features/fx/loaders';
 import { readStore, writeStore } from './lib/storage';
-import { prefersReducedMotion } from './lib/reducedMotion';
 
 type Phase = 'boot' | 'transition' | 'dossier';
 
@@ -31,8 +30,8 @@ class FxBoundary extends Component<
   }
 }
 
+// Reduced motion still gets the boot: BootTerminal renders it static and CrtTransition fades.
 function initialPhase(): Phase {
-  if (prefersReducedMotion()) return 'dossier';
   return readStore('session', BOOT_SEEN_KEY) === '1' ? 'dossier' : 'boot';
 }
 

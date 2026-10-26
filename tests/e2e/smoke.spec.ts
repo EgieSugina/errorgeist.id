@@ -177,14 +177,18 @@ test.describe('boot and phases', () => {
   test.describe('reduced motion', () => {
     test.use({ reducedMotion: 'reduce' });
 
-    test('first load starts at the dossier, no boot terminal', async ({ page }) => {
+    test('first load shows the static boot terminal, then fades to the dossier on its own', async ({ page }) => {
       await page.goto('/');
-      await expect(page.locator('#profile')).toBeVisible();
-      await expect(page.getByRole('region', { name: 'Secure terminal' })).toHaveCount(0);
+      const terminal = page.getByRole('region', { name: 'Secure terminal' });
+      await expect(terminal).toBeVisible();
+      // Static: every line is already on screen, nothing is typed.
+      await expect(terminal.getByText(/MATCH FOUND/)).toBeVisible();
+      await expect(page.locator('#profile')).toBeInViewport({ timeout: 5000 });
+      await expect(terminal).toHaveCount(0);
     });
 
     test('a case file still opens and closes', async ({ page }) => {
-      await page.goto('/');
+      await enterDossier(page);
       await openCloseCaseFile(page);
     });
   });
@@ -246,8 +250,7 @@ test.describe('three.js loads only when WebGL effects run', () => {
 
     test('no three.js or renderer chunk is requested, even through a boot replay', async ({ page }) => {
       const urls = watchWebglChunks(page);
-      await page.goto('/');
-      await expect(page.locator('#profile')).toBeVisible();
+      await enterDossier(page);
       await page.getByRole('button', { name: /replay boot/i }).click();
       await expect(page.getByRole('region', { name: 'Secure terminal' })).toBeVisible();
       await page.keyboard.press('Space');

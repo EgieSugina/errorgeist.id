@@ -143,11 +143,19 @@ describe('App phase machine', () => {
     expect(screen.queryByText(/SECURE TERMINAL/)).not.toBeInTheDocument();
   });
 
-  it('starts straight at the dossier under reduced motion', () => {
+  it('under reduced motion shows a static boot terminal, then fades to the dossier', async () => {
     setReducedMotion(true);
     const { container } = render(<App />);
+    expect(screen.getByText(/SECURE TERMINAL/)).toBeInTheDocument();
+    // Static: the whole script is on screen at once, nothing to type.
+    expect(screen.getByText(/MATCH FOUND/)).toBeInTheDocument();
+    expect(dossierHeading()).not.toBeInTheDocument();
+    await advance(2600);
+    expect(container.querySelector('[data-fx="crt-fade"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-fx="crt-css"], [data-fx="crt-webgl"]')).not.toBeInTheDocument();
+    await advance(400);
     expect(container.querySelector('#profile')).toBeInTheDocument();
-    expect(screen.queryByText(/SECURE TERMINAL/)).not.toBeInTheDocument();
+    expect(window.sessionStorage.getItem('egs.bootSeen')).toBe('1');
   });
 
   it('still boots and reaches the dossier when storage throws', async () => {
@@ -177,6 +185,7 @@ describe('App phase machine', () => {
 
   it('replay boot under reduced motion ends in an opacity fade, not the CRT power-off', async () => {
     setReducedMotion(true);
+    window.sessionStorage.setItem('egs.bootSeen', '1');
     const { container } = render(<App />);
     fireEvent.click(screen.getByRole('button', { name: /replay boot/i }));
     act(() => {
@@ -208,6 +217,10 @@ describe('App phase machine', () => {
     setReducedMotion(true);
     webgl.forceAvailable = true;
     render(<App />);
+    // First visit: static boot, then the fade.
+    expect(screen.getByText(/SECURE TERMINAL/)).toBeInTheDocument();
+    await skipAndSettle();
+    expect(dossierHeading()).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /replay boot/i }));
     act(() => {
       fireEvent.keyDown(window, { key: 'x' });
