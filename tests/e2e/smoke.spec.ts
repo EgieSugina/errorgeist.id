@@ -231,7 +231,9 @@ test.describe('operations', () => {
     for (let i = 0; i < 15; i++) {
       const trigger = buttons.nth(i);
       await openCaseFile(page, trigger);
-      await page.keyboard.press('Escape');
+      // Alternate the two keyboard/pointer exits so both stay covered.
+      if (i % 2 === 0) await page.keyboard.press('Escape');
+      else await page.getByRole('button', { name: /close file/i }).click();
       await expectCaseFileGone(page, trigger);
     }
   });
