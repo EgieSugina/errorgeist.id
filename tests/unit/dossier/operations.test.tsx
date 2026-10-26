@@ -54,20 +54,20 @@ function cardButton(codename: string) {
 }
 
 describe('Operations cards', () => {
-  it('renders 10 cards: 6 CLASSIFIED and 4 DECLASSIFIED', () => {
+  it('renders 15 cards: 6 CLASSIFIED and 9 DECLASSIFIED', () => {
     renderEn(<Operations />);
     const cards = screen.getAllByRole('article');
-    expect(cards).toHaveLength(10);
+    expect(cards).toHaveLength(15);
     const stamps = cards.map((c) =>
       within(c).queryByText('DECLASSIFIED') ? 'declassified' : within(c).queryByText('CLASSIFIED') ? 'classified' : null,
     );
     expect(stamps.filter((s) => s === 'classified')).toHaveLength(6);
-    expect(stamps.filter((s) => s === 'declassified')).toHaveLength(4);
+    expect(stamps.filter((s) => s === 'declassified')).toHaveLength(9);
   });
 
-  it('LUCY and HOME CHEF AI headings are fully named, with no redaction bar', () => {
+  it('every personal card heading is fully named, with no redaction bar', () => {
     renderEn(<Operations />);
-    for (const name of ['LUCY', 'HOME CHEF AI']) {
+    for (const name of ['LUCY', 'HOME CHEF AI', 'LAWANG', 'KINANTI', '0xPHANTOMPORTAL', 'A.S.M.O.D.E.U.S', 'THESIS // S.Kom']) {
       const card = cardButton(name).closest('article')!;
       const heading = within(card).getByRole('heading', { level: 3 });
       expect(heading.textContent).toContain(name);
@@ -187,9 +187,38 @@ describe('CaseFile dialog', () => {
       expect(anchors[0]).toHaveAttribute('href', op.links[0]!.href);
       cleanup();
     }
+    const phantom = operations.find((o) => o.id === 'phantomportal')!;
+    renderEn(<CaseFile op={phantom} onClose={() => {}} />);
+    expect(screen.getByRole('dialog').querySelectorAll('a')).toHaveLength(1);
+    cleanup();
+    for (const id of ['lucy', 'lawang', 'kinanti', 'asmodeus', 'thesis']) {
+      renderEn(<CaseFile op={operations.find((o) => o.id === id)!} onClose={() => {}} />);
+      expect(screen.getByRole('dialog').querySelectorAll('a')).toHaveLength(0);
+      cleanup();
+    }
+  });
+
+  it('a link-less declassified op says its source is held privately, not "not yet filed"', () => {
     const lucy = operations.find((o) => o.id === 'lucy')!;
     renderEn(<CaseFile op={lucy} onClose={() => {}} />);
-    expect(screen.getByRole('dialog').querySelectorAll('a')).toHaveLength(0);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.textContent).toContain('Source code held privately.');
+    expect(dialog.textContent).not.toMatch(/not yet filed/i);
+  });
+
+  it('the private note is translated', () => {
+    window.localStorage.setItem('egs.lang', 'id');
+    const lucy = operations.find((o) => o.id === 'lucy')!;
+    renderEn(<CaseFile op={lucy} onClose={() => {}} />);
+    expect(screen.getByRole('dialog').textContent).toContain('Kode sumber disimpan privat.');
+  });
+
+  it('a classified dialog keeps the withheld note', () => {
+    const op = operations.find((o) => o.id === 'hivemind')!;
+    renderEn(<CaseFile op={op} onClose={() => {}} />);
+    const text = screen.getByRole('dialog').textContent ?? '';
+    expect(text).toContain('Client property, withheld.');
+    expect(text).not.toContain('held privately');
   });
 
   it('every classified dialog is link-free even if links were added to the data', () => {
@@ -230,20 +259,45 @@ describe('CaseFile dialog', () => {
 });
 
 describe('ArchiveList', () => {
-  it('renders every family with its items, each prefixed OP. and a redaction', () => {
+  it('classified families render every item prefixed OP. with a redaction', () => {
     renderEn(<ArchiveList />);
-    let total = 0;
-    for (const g of archive) {
+    for (const g of archive.filter((x) => x.clearance === 'classified')) {
       const list = screen.getByRole('list', { name: g.family.en });
       const items = within(list).getAllByRole('listitem');
       expect(items).toHaveLength(g.items.length);
       items.forEach((li, i) => {
         expect(li.textContent).toMatch(/^OP\./);
         expect(within(li).getByRole('img', { name: 'redacted' })).toBeInTheDocument();
-        expect(li.textContent).toContain(g.items[i].en);
+        expect(li.textContent).toContain((g.items[i] as { en: string }).en);
       });
-      total += items.length;
     }
-    expect(total).toBe(archive.reduce((n, g) => n + g.items.length, 0));
+  });
+
+  it('the declassified family shows real names and GitHub links, with no OP. prefix or redaction', () => {
+    renderEn(<ArchiveList />);
+    const family = archive.find((g) => g.clearance === 'declassified')!;
+    const list = screen.getByRole('list', { name: family.family.en });
+    const items = within(list).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    for (const li of items) {
+      expect(li.textContent).not.toMatch(/^OP\./);
+      expect(within(li).queryByRole('img', { name: 'redacted' })).toBeNull();
+    }
+    const expected: Record<string, string> = {
+      'G14-Slash-Lighting-Events': 'https://github.com/EgieSugina/G14-Slash-Lighting-Events',
+      'axios-supply-chain-scanner-for-pnpm': 'https://github.com/EgieSugina/axios-supply-chain-scanner-for-pnpm',
+    };
+    for (const [name, href] of Object.entries(expected)) {
+      const link = within(list).getByRole('link', { name: new RegExp(name) });
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    }
+  });
+
+  it('renders one list item per archive entry across all families', () => {
+    renderEn(<ArchiveList />);
+    const total = archive.reduce((n, g) => n + g.items.length, 0);
+    expect(screen.getAllByRole('listitem')).toHaveLength(total);
   });
 });

@@ -3,6 +3,7 @@ import { colors } from '../../../tokens/colors.stylex';
 import { fonts } from '../../../tokens/fonts.stylex';
 import { useLang } from '../../../i18n/LangProvider';
 import { education } from '../../../content/education';
+import { ui } from '../../../content/ui';
 import { DossierSection } from '../DossierSection';
 import { Paper } from '../primitives/Paper';
 
@@ -43,6 +44,21 @@ const styles = stylex.create({
     borderTopStyle: 'dashed',
     borderTopColor: colors.paperEdge,
   },
+  thesis: {
+    margin: '10px 0 0',
+    maxWidth: '68ch',
+    fontSize: '0.92rem',
+    lineHeight: 1.5,
+    color: colors.inkDim,
+  },
+  thesisLabel: {
+    marginRight: 8,
+    fontFamily: fonts.stamp,
+    fontSize: '0.78rem',
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+    color: colors.ink,
+  },
   otherLabel: { color: colors.ink },
   otherDetail: { fontFamily: fonts.body, color: colors.inkDim },
 });
@@ -58,6 +74,12 @@ export function Education() {
             <h3 {...stylex.props(styles.degree)}>{t(primary.degree)}</h3>
             <p {...stylex.props(styles.school)}>{primary.school}</p>
             <p {...stylex.props(styles.status)}>{t(primary.status)}</p>
+            {primary.thesis && (
+              <p {...stylex.props(styles.thesis)}>
+                <span {...stylex.props(styles.thesisLabel)}>{t(ui.education.thesis)}</span>
+                {t(primary.thesis)}
+              </p>
+            )}
           </li>
           {others.map((o) => (
             <li key={o.label.en} {...stylex.props(styles.other)}>

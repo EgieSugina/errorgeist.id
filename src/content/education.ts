@@ -1,7 +1,7 @@
 import type { L10n } from '../i18n/types';
 
 export const education: {
-  primary: { degree: L10n; school: string; status: L10n };
+  primary: { degree: L10n; school: string; status: L10n; thesis?: L10n };
   others: { label: L10n; detail?: L10n }[];
 } = {
   primary: {
@@ -11,6 +11,10 @@ export const education: {
     },
     school: 'Universitas Subang (UNSUB)',
     status: { en: 'Graduated, Odd Semester 2025/2026', id: 'Lulus, Ganjil 2025/2026' },
+    thesis: {
+      en: 'Implementing Natural Language Processing and Large Language Models in a Telegram AI Agent for Telco Network Data Analysis',
+      id: 'Implementasi Natural Language Processing dan Large Language Model pada AI Agent aplikasi Telegram untuk Analisis Data Jaringan Telco',
+    },
   },
   others: [
     {

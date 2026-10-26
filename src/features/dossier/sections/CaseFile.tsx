@@ -502,7 +502,7 @@ export function CaseFile({ op, onClose }: Props) {
                   ))}
                 </ul>
               ) : (
-                <p {...stylex.props(styles.muted)}>{t(ui.operations.linksPending)}</p>
+                <p {...stylex.props(styles.muted)}>{t(ui.operations.linksPrivate)}</p>
               )}
             </section>
 

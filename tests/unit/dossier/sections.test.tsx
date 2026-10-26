@@ -120,6 +120,26 @@ describe('Education', () => {
   });
 });
 
+describe('Education thesis', () => {
+  it('shows the thesis under the S1 entry in English', () => {
+    renderIn('en', <Education />);
+    const first = screen.getAllByRole('listitem')[0];
+    expect(first.textContent).toContain('Thesis');
+    expect(first.textContent).toContain(
+      'Implementing Natural Language Processing and Large Language Models in a Telegram AI Agent for Telco Network Data Analysis',
+    );
+  });
+
+  it('shows the thesis under the S1 entry in Indonesian', () => {
+    renderIn('id', <Education />);
+    const first = screen.getAllByRole('listitem')[0];
+    expect(first.textContent).toContain('Skripsi');
+    expect(first.textContent).toContain(
+      'Implementasi Natural Language Processing dan Large Language Model pada AI Agent aplikasi Telegram untuk Analisis Data Jaringan Telco',
+    );
+  });
+});
+
 describe('SecureChannel', () => {
   it('links to email, GitHub and LinkedIn; external links open safely', () => {
     renderIn('en', <SecureChannel />);

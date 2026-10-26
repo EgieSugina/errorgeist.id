@@ -55,9 +55,9 @@ export const ui = {
       en: 'No public links. Client property, withheld.',
       id: 'Tanpa tautan publik. Milik klien, ditahan.',
     },
-    linksPending: {
-      en: 'Repository and demo links not yet filed.',
-      id: 'Tautan repositori dan demo belum diarsipkan.',
+    linksPrivate: {
+      en: 'Source code held privately.',
+      id: 'Kode sumber disimpan privat.',
     },
     end: { en: 'END OF CASE FILE', id: 'AKHIR BERKAS KASUS' },
   },
@@ -65,9 +65,12 @@ export const ui = {
     tab: { en: 'ARCHIVE', id: 'ARSIP' },
     title: { en: 'Operations archive', id: 'Arsip operasi' },
     intro: {
-      en: 'Smaller operations on record, grouped by family. All names withheld.',
-      id: 'Operasi lain yang tercatat, dikelompokkan per keluarga. Semua nama disembunyikan.',
+      en: 'Smaller operations on record, grouped by family. Client names withheld; personal projects are named.',
+      id: 'Operasi lain yang tercatat, dikelompokkan per keluarga. Nama klien disembunyikan; projek pribadi disebut.',
     },
+  },
+  education: {
+    thesis: { en: 'Thesis', id: 'Skripsi' },
   },
   arsenal: {
     intro: {

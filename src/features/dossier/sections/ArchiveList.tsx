@@ -77,9 +77,27 @@ const styles = stylex.create({
     color: colors.inkDim,
   },
   desc: { minWidth: 0, fontFamily: fonts.body },
+  // Declassified entries carry a real, often long, repo name: it gets its own line above the text.
+  itemNamed: { display: 'block', paddingBlock: 4, lineHeight: 1.55, color: colors.ink },
+  name: {
+    display: 'block',
+    fontSize: '0.85rem',
+    letterSpacing: '0.04em',
+    color: colors.ink,
+    overflowWrap: 'anywhere',
+  },
+  descNamed: { display: 'block', minWidth: 0, fontFamily: fonts.body },
+  link: {
+    color: colors.ink,
+    textDecorationLine: 'underline',
+    textDecorationColor: colors.inkDim,
+    textUnderlineOffset: 4,
+    outline: { default: 'none', ':focus-visible': `1px dashed ${colors.phosphor}` },
+    outlineOffset: 2,
+  },
 });
 
-/** Smaller operations, every name redacted, grouped by family. */
+/** Smaller operations grouped by family: client work redacted, personal work named. */
 export function ArchiveList() {
   const { t } = useLang();
   const baseId = useId();
@@ -101,17 +119,37 @@ export function ArchiveList() {
                 </span>
               </h4>
               <ul aria-labelledby={headingId} {...stylex.props(styles.items)}>
-                {g.items.map((item) => (
-                  <li key={item.en} {...stylex.props(styles.item)}>
-                    <span {...stylex.props(styles.prefix)}>
-                      OP. <Redacted chars={6} />
-                    </span>
-                    <span {...stylex.props(styles.desc)}>
-                      <span aria-hidden="true">— </span>
-                      {t(item)}
-                    </span>
-                  </li>
-                ))}
+                {g.clearance === 'declassified'
+                  ? g.items.map((item) => (
+                      <li key={item.name} {...stylex.props(styles.itemNamed)}>
+                        <span {...stylex.props(styles.name)}>
+                          {item.href ? (
+                            <a
+                              href={item.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              {...stylex.props(styles.link)}
+                            >
+                              {item.name}
+                            </a>
+                          ) : (
+                            item.name
+                          )}
+                        </span>
+                        <span {...stylex.props(styles.descNamed)}>{t(item.text)}</span>
+                      </li>
+                    ))
+                  : g.items.map((item) => (
+                      <li key={item.en} {...stylex.props(styles.item)}>
+                        <span {...stylex.props(styles.prefix)}>
+                          OP. <Redacted chars={6} />
+                        </span>
+                        <span {...stylex.props(styles.desc)}>
+                          <span aria-hidden="true">— </span>
+                          {t(item)}
+                        </span>
+                      </li>
+                    ))}
               </ul>
             </div>
           );
