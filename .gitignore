@@ -5,3 +5,4 @@ docs/
 .leak-blocklist
 test-results/
 playwright-report/
+.vercel/

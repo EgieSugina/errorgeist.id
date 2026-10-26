@@ -9,13 +9,20 @@ const BINARY_EXT = /\.(png|jpe?g|woff2)$/i;
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** Split on newlines and commas, trim, drop blanks and `#` comment lines. @param {string} text */
+export function parseBlocklistText(text) {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !line.trim().startsWith('#'))
+    .flatMap((line) => line.split(','))
+    .map((t) => t.trim())
+    .filter((t) => t !== '');
+}
+
 /** @param {string} path */
 export function loadBlocklist(path) {
   if (!existsSync(path)) throw new Error(`leak blocklist missing: ${path}`);
-  const terms = readFileSync(path, 'utf8')
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l !== '' && !l.startsWith('#'));
+  const terms = parseBlocklistText(readFileSync(path, 'utf8'));
   if (terms.length === 0) throw new Error(`leak blocklist empty: ${path}`);
   return terms;
 }
@@ -47,11 +54,29 @@ export function scanForLeaks(distDir, terms) {
   return hits;
 }
 
+/** Terms from env LEAK_BLOCKLIST_TERMS when set and non-blank, else from the blocklist file. */
+function resolveBlocklist() {
+  const fromEnv = process.env.LEAK_BLOCKLIST_TERMS;
+  if (fromEnv !== undefined && fromEnv.trim() !== '') {
+    const terms = parseBlocklistText(fromEnv);
+    if (terms.length === 0) throw new Error('leak blocklist empty: LEAK_BLOCKLIST_TERMS');
+    return { terms, source: 'env' };
+  }
+  const path = process.env.LEAK_BLOCKLIST ?? '.leak-blocklist';
+  try {
+    return { terms: loadBlocklist(path), source: 'file' };
+  } catch (err) {
+    if (err instanceof Error && /^leak blocklist missing/.test(err.message)) {
+      throw new Error(`${err.message} (or set LEAK_BLOCKLIST_TERMS)`);
+    }
+    throw err;
+  }
+}
+
 function main() {
-  const blocklistPath = process.env.LEAK_BLOCKLIST ?? '.leak-blocklist';
   const distDir = 'dist';
   try {
-    const terms = loadBlocklist(blocklistPath);
+    const { terms, source } = resolveBlocklist();
     if (!existsSync(distDir)) throw new Error(`leak check: ${distDir}/ not found`);
     const hits = scanForLeaks(distDir, terms);
     if (hits.length > 0) {
@@ -59,7 +84,7 @@ function main() {
       console.error(`leak check: FAILED (${hits.length} hits)`);
       process.exit(1);
     }
-    console.log(`leak check: clean (${terms.length} terms, ${walk(distDir).length} files)`);
+    console.log(`leak check: clean (${terms.length} terms from ${source}, ${walk(distDir).length} files)`);
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     process.exit(1);

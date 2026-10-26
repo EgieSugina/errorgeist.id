@@ -2,13 +2,18 @@
   "name": "errorgeist-id",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@12.6.0",
+  "engines": {
+    "node": ">=20"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build && node scripts/check-leaks.mjs",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "blocklist:env": "node scripts/print-blocklist-env.mjs"
   },
   "dependencies": {
     "@stylexjs/stylex": "^0.19.1",
