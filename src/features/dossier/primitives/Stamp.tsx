@@ -34,9 +34,8 @@ const styles = stylex.create({
     color: colors.stamp,
     border: `3px solid ${colors.stamp}`,
     borderRadius: 3,
-    // Inner hairline gives the classic double-ruled stamp border.
+    // Inner hairline gives the classic double-ruled stamp border. Normal blend: red ink on dark paper.
     boxShadow: `inset 0 0 0 2px transparent, inset 0 0 0 3px ${colors.stamp}`,
-    mixBlendMode: 'multiply',
     // Worn-ink speckle: an alpha mask of tiled turbulence punches tiny gaps in the print.
     maskImage:
       "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 9 0 0 0 -3.1'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E\")",
@@ -49,18 +48,22 @@ const styles = stylex.create({
 
 export function Stamp({ kind }: { kind: StampKind }) {
   const reduce = useReducedMotion();
+  // motion's viewport mount calls `new IntersectionObserver` unconditionally; without it, render statically.
+  const canObserve = typeof IntersectionObserver !== 'undefined';
   const angle = ANGLES[kind];
 
   // "Stamp hit": slams down big, overshoots slightly small, settles. Reduced motion: fade only.
-  const motionProps = reduce
+  const motionProps = !canObserve
+    ? { initial: false as const, animate: { rotate: angle, opacity: 1, scale: 1 } }
+    : reduce
     ? {
         initial: { opacity: 0, rotate: angle },
-        whileInView: { opacity: 0.9, rotate: angle },
+        whileInView: { opacity: 1, rotate: angle },
         transition: { duration: 0.4 },
       }
     : {
         initial: { opacity: 0, scale: 1.6, rotate: angle - 4 },
-        whileInView: { opacity: 0.9, scale: 1, rotate: angle },
+        whileInView: { opacity: 1, scale: 1, rotate: angle },
         transition: {
           opacity: { duration: 0.12 },
           scale: { type: 'spring' as const, stiffness: 520, damping: 14, mass: 0.8 },
@@ -70,7 +73,7 @@ export function Stamp({ kind }: { kind: StampKind }) {
 
   return (
     <motion.span
-      viewport={{ once: true, amount: 0.6 }}
+      {...(canObserve ? { viewport: { once: true, amount: 0.6 } } : {})}
       {...motionProps}
       {...stylex.props(styles.stamp)}
     >

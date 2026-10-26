@@ -5,10 +5,6 @@ import { fonts } from '../../../tokens/fonts.stylex';
 import { useLang } from '../../../i18n/LangProvider';
 import type { L10n } from '../../../i18n/types';
 
-const TAB_FACE = '#2b241a';
-const TAB_EDGE = '#3a3226';
-const TAB_TEXT = '#a8977a';
-
 const styles = stylex.create({
   bar: {
     position: 'sticky',
@@ -21,7 +17,7 @@ const styles = stylex.create({
     overscrollBehaviorX: 'contain',
     scrollbarWidth: 'none',
     backgroundColor: colors.desk,
-    borderBottom: `1px solid ${TAB_EDGE}`,
+    borderBottom: `1px solid ${colors.paperEdge}`,
     boxShadow: '0 6px 14px rgba(0,0,0,0.5)',
   },
   row: {
@@ -45,21 +41,22 @@ const styles = stylex.create({
     textDecoration: 'none',
     whiteSpace: 'nowrap',
     color: {
-      default: TAB_TEXT,
-      ':hover': colors.paper,
+      default: colors.inkDim,
+      ':hover': colors.ink,
     },
-    backgroundColor: TAB_FACE,
-    border: `1px solid ${TAB_EDGE}`,
+    backgroundColor: colors.folderTab,
+    border: `1px solid ${colors.paperEdge}`,
     borderBottom: 'none',
     borderRadius: '6px 6px 0 0',
     outline: { default: 'none', ':focus-visible': `1px dashed ${colors.phosphor}` },
     outlineOffset: -3,
   },
   current: {
-    // The open tab is the manila sheet itself, joined to the bar's bottom edge.
+    // The open tab is the dark sheet itself, joined to the bar's bottom edge, with a red index mark.
     color: colors.ink,
     backgroundColor: colors.paper,
-    borderColor: colors.paperEdge,
+    borderTop: `2px solid ${colors.stamp}`,
+    paddingTop: 6,
     paddingBottom: 9,
     marginBottom: -1,
   },

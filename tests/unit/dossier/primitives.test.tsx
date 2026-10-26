@@ -106,6 +106,15 @@ describe('Stamp', () => {
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
+  it('mounts and renders visibly without IntersectionObserver', () => {
+    // @ts-expect-error simulate an environment without IO
+    delete globalThis.IntersectionObserver;
+    expect(() => render(<Stamp kind="classified" />)).not.toThrow();
+    const el = screen.getByText('CLASSIFIED');
+    expect(el).toBeInTheDocument();
+    expect(el.style.opacity).not.toBe('0');
+  });
+
   it('keeps the English label when the language is id', () => {
     window.localStorage.setItem('egs.lang', 'id');
     render(

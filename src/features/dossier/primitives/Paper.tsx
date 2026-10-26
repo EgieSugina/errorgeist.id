@@ -3,35 +3,22 @@ import * as stylex from '@stylexjs/stylex';
 import { colors } from '../../../tokens/colors.stylex';
 import { fonts } from '../../../tokens/fonts.stylex';
 
-// Folder-board browns from the approved mockup; decorative only, not text-on-paper colors.
-const FOLDER = '#1c1813';
-const FOLDER_EDGE = '#3a3226';
-const TAB_FACE = '#2b241a';
-const TAB_TEXT = '#a8977a';
-
 const styles = stylex.create({
+  clipWire: { fill: 'none', stroke: colors.clipMetal },
   folder: {
     position: 'relative',
     // Room above for the tab and clip that overhang the folder edge.
     marginTop: 14,
-    padding: 'clamp(10px, 2.4vw, 18px)',
-    backgroundColor: FOLDER,
-    border: `1px solid ${FOLDER_EDGE}`,
-    borderRadius: 3,
-    boxShadow: '0 10px 30px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.04)',
-    minWidth: 0,
-  },
-  sheet: {
-    position: 'relative',
     padding: 'clamp(16px, 3.4vw, 28px)',
     backgroundColor: colors.paper,
-    // Faint typewritten-ruled lines and an edge-darkening, like an aged sheet.
-    backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(90,84,72,0.10) 27px, rgba(90,84,72,0.10) 28px), linear-gradient(to right, ${colors.paperEdge}, transparent 6%, transparent 94%, ${colors.paperEdge})`,
+    // Aged-board look: a warm highlight top-left and darker corners, plus faint ruled lines.
+    backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(230,220,196,0.05) 27px, rgba(230,220,196,0.05) 28px), radial-gradient(circle at 30% 0%, rgba(230,220,196,0.07), transparent 60%)`,
     color: colors.ink,
     fontFamily: fonts.typewriter,
     lineHeight: 1.6,
-    borderRadius: 1,
-    boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+    border: `1px solid ${colors.paperEdge}`,
+    borderRadius: 3,
+    boxShadow: '0 10px 30px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.04)',
     overflowWrap: 'anywhere',
     minWidth: 0,
   },
@@ -41,9 +28,9 @@ const styles = stylex.create({
     right: 24,
     transform: 'translateY(-100%)',
     padding: '4px 12px 3px',
-    backgroundColor: TAB_FACE,
-    color: TAB_TEXT,
-    border: `1px solid ${FOLDER_EDGE}`,
+    backgroundColor: colors.folderTab,
+    color: colors.inkDim,
+    border: `1px solid ${colors.paperEdge}`,
     borderBottom: 'none',
     borderRadius: '4px 4px 0 0',
     fontFamily: fonts.typewriter,
@@ -72,7 +59,7 @@ type PaperProps = {
   children?: ReactNode;
 };
 
-/** A manila sheet inside a dark case-file folder, with optional file tab and paper clip. */
+/** A dark case-file sheet with cream typewriter text, optional file tab and paper clip. */
 export function Paper({ tab, clip = false, children }: PaperProps) {
   return (
     <div {...stylex.props(styles.folder)}>
@@ -86,15 +73,14 @@ export function Paper({ tab, clip = false, children }: PaperProps) {
         >
           <path
             d="M16 18 V46 a7 7 0 0 1 -14 0 V12 a9 9 0 0 1 18 0 V42 a4 4 0 0 1 -8 0 V18"
-            fill="none"
-            stroke="#a9adb0"
+            {...stylex.props(styles.clipWire)}
             strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
         </svg>
       )}
-      <div {...stylex.props(styles.sheet)}>{children}</div>
+      {children}
     </div>
   );
 }

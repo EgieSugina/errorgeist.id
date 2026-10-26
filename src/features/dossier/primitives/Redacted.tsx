@@ -22,7 +22,7 @@ const styles = stylex.create({
     backgroundColor: colors.redaction,
     borderRadius: 1,
     // Marker-pen edge: a faint lighter rim so the bar reads as ink, not a flat box.
-    boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06), 0 1px 0 rgba(0,0,0,0.35)',
+    boxShadow: 'inset 0 0 0 1px rgba(230,220,196,0.14), 0 1px 0 rgba(0,0,0,0.35)',
     transformOrigin: 'left center',
   },
   tooltip: {
