@@ -1,0 +1,287 @@
+import { test as base, expect, type Locator, type Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+const SECTION_IDS = ['profile', 'record', 'operations', 'arsenal', 'education', 'contact'];
+
+/**
+ * Console errors and uncaught exceptions fail the test that produced them.
+ * Nothing is ignored: WebGL driver chatter shows up as console.warn, which is not collected.
+ * Google Fonts is stubbed so the run is hermetic (an offline runner would otherwise log
+ * "Failed to load resource" errors that say nothing about the site).
+ */
+const test = base.extend<{ errors: string[] }>({
+  errors: [
+    async ({ page }, use) => {
+      const errors: string[] = [];
+      page.on('console', (m) => {
+        if (m.type() === 'error') errors.push(`console.error: ${m.text()}`);
+      });
+      page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+      await page.route(/https:\/\/fonts\.(googleapis|gstatic)\.com\//, (r) =>
+        r.fulfill({ status: 200, contentType: 'text/css', body: '' }),
+      );
+      await use(errors);
+      expect(errors, 'console errors').toEqual([]);
+    },
+    { auto: true },
+  ],
+});
+
+/** Load the site, skip the boot terminal with a key press and wait for the dossier. */
+async function enterDossier(page: Page) {
+  await page.goto('/');
+  await expect(page.getByRole('region', { name: 'Secure terminal' })).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(page.locator('#profile')).toBeInViewport({ timeout: 3000 });
+}
+
+/** Scroll a section into view and let its whileInView reveal finish. */
+async function reveal(page: Page, id: string) {
+  const section = page.locator(`#${id}`);
+  await section.scrollIntoViewIfNeeded();
+  await section.evaluate((el) => el.scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(900);
+  return section;
+}
+
+async function revealAll(page: Page) {
+  for (const id of SECTION_IDS) await reveal(page, id);
+}
+
+/**
+ * Elements whose box pokes outside the viewport horizontally. `overflow-x: clip` on the page
+ * root hides real overflow from scrollWidth, so boxes are measured directly. Hidden elements
+ * and anything inside an internally scrolling container (e.g. the SectionTabs bar) are skipped.
+ */
+function horizontalOverflow(root: Locator) {
+  return root.evaluate((rootEl) => {
+    const vw = window.innerWidth;
+    const out: string[] = [];
+    const hiddenOrScrolling = (el: Element) => {
+      for (let n: Element | null = el; n; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return true;
+        if (n !== el && (cs.overflowX === 'auto' || cs.overflowX === 'scroll')) return true;
+      }
+      return false;
+    };
+    for (const el of [rootEl, ...rootEl.querySelectorAll('*')]) {
+      if (el instanceof SVGElement && !(el instanceof SVGSVGElement)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (r.left >= -1 && r.right <= vw + 1) continue;
+      if (hiddenOrScrolling(el)) continue;
+      const cls = typeof el.className === 'string' ? el.className.slice(0, 40) : '';
+      out.push(`${el.tagName.toLowerCase()}.${cls} [${Math.round(r.left)}..${Math.round(r.right)}] vw=${vw}`);
+    }
+    return out;
+  });
+}
+
+/** Open the HIVEMIND case file, check it, close it with Escape and check it is really gone. */
+async function openCloseCaseFile(page: Page) {
+  const trigger = page.getByRole('button', { name: /HIVEMIND/ });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('heading', { level: 2 })).toContainText('HIVEMIND');
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+  // The panel never animates its own box, but poll anyway so a settling layout can't flake.
+  await expect
+    .poll(async () => {
+      const box = await dialog.boundingBox();
+      const vp = page.viewportSize()!;
+      return !!box && box.x >= 0 && box.y >= 0 && box.x + box.width <= vp.width && box.y + box.height <= vp.height;
+    })
+    .toBe(true);
+  expect(await horizontalOverflow(dialog)).toEqual([]);
+
+  await page.keyboard.press('Escape');
+  // Closing drops the dialog role at once; the node itself outlives the exit animation.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  // After the exit animation nothing of the file may stay in the DOM.
+  await expect(page.getByTestId('casefile-backdrop')).toHaveCount(0);
+  await expect(page.locator('[inert]')).toHaveCount(0);
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
+  // Focus goes back to the card that opened it.
+  await expect(trigger).toBeFocused();
+}
+
+test.describe('boot and phases', () => {
+  test('boot terminal skips on a key press and lands on the dossier', async ({ page }) => {
+    await enterDossier(page);
+    await expect(page.locator('#profile')).toBeVisible();
+  });
+
+  test('a reload in the same session skips the boot terminal', async ({ page }) => {
+    await enterDossier(page);
+    await page.reload();
+    await expect(page.locator('#profile')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Secure terminal' })).toHaveCount(0);
+  });
+
+  test('dossier appears without WebGL', async ({ page }) => {
+    await page.addInitScript(() => {
+      const real = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...rest: unknown[]) {
+        if (/webgl/i.test(type)) return null;
+        return (real as (...a: unknown[]) => unknown).call(this, type, ...rest);
+      } as typeof real;
+    });
+    await enterDossier(page);
+    await expect(page.locator('#profile')).toBeVisible();
+  });
+
+  test.describe('reduced motion', () => {
+    test.use({ reducedMotion: 'reduce' });
+
+    test('first load starts at the dossier, no boot terminal', async ({ page }) => {
+      await page.goto('/');
+      await expect(page.locator('#profile')).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Secure terminal' })).toHaveCount(0);
+    });
+
+    test('a case file still opens and closes', async ({ page }) => {
+      await page.goto('/');
+      await openCloseCaseFile(page);
+    });
+  });
+});
+
+test.describe('language toggle', () => {
+  test('ID switches <html lang> and survives a reload', async ({ page }) => {
+    await enterDossier(page);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await page.getByRole('button', { name: 'ID', exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'id');
+    await page.reload();
+    await expect(page.locator('html')).toHaveAttribute('lang', 'id');
+    await expect(page.getByRole('button', { name: 'ID', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
+test.describe('operations', () => {
+  test('15 case cards: 6 classified, 9 declassified', async ({ page }) => {
+    await enterDossier(page);
+    await reveal(page, 'operations');
+    const cards = page.locator('#operations article');
+    await expect(cards).toHaveCount(15);
+    await expect(cards.getByText('CLASSIFIED', { exact: true })).toHaveCount(6);
+    await expect(cards.getByText('DECLASSIFIED', { exact: true })).toHaveCount(9);
+  });
+
+  test('HIVEMIND case file opens inside the viewport, Escape closes it and it unmounts', async ({ page }) => {
+    await enterDossier(page);
+    await reveal(page, 'operations');
+    await openCloseCaseFile(page);
+  });
+
+  test('clicking the backdrop also closes the case file', async ({ page }) => {
+    await enterDossier(page);
+    await reveal(page, 'operations');
+    await page.getByRole('button', { name: /HIVEMIND/ }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: /close file/i }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByTestId('casefile-backdrop')).toHaveCount(0);
+  });
+});
+
+test.describe('layout', () => {
+  test('no horizontal overflow in any section', async ({ page }, info) => {
+    await enterDossier(page);
+    const mobile = info.project.name === 'mobile';
+    for (const id of SECTION_IDS) {
+      const section = await reveal(page, id);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+        `scrollWidth in #${id}`,
+      ).toBe(true);
+      // `overflow-x: clip` can hide overflow from scrollWidth, so measure boxes too.
+      expect(await horizontalOverflow(section), `boxes in #${id}`).toEqual([]);
+      if (mobile) expect(page.viewportSize()!.width).toBe(375);
+    }
+    expect(await horizontalOverflow(page.locator('header'))).toEqual([]);
+  });
+
+  test('every case card fits the viewport width', async ({ page }) => {
+    await enterDossier(page);
+    await reveal(page, 'operations');
+    const vw = page.viewportSize()!.width;
+    const cards = page.locator('#operations article');
+    for (let i = 0; i < 15; i++) {
+      const card = cards.nth(i);
+      await card.scrollIntoViewIfNeeded();
+      const box = (await card.boundingBox())!;
+      expect(box.x, `card ${i} left`).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, `card ${i} right`).toBeLessThanOrEqual(vw);
+    }
+  });
+});
+
+test.describe('meta', () => {
+  test('head carries the title, description, Open Graph, Twitter and theme tags', async ({ page, request }) => {
+    await page.goto('/');
+    await expect(page).toHaveTitle('Egie Sugina — Classified Dossier');
+    const meta = (sel: string) => page.locator(`head meta[${sel}]`).getAttribute('content');
+    expect((await meta('name="description"'))?.length).toBeGreaterThan(40);
+    expect(await meta('property="og:title"')).toBeTruthy();
+    expect(await meta('property="og:description"')).toBeTruthy();
+    expect(await meta('property="og:image"')).toBe('https://errorgeist.id/og.png');
+    expect(await meta('property="og:url"')).toBe('https://errorgeist.id/');
+    expect(await meta('name="twitter:card"')).toBe('summary_large_image');
+    expect(await meta('name="theme-color"')).toBe('#0b0907');
+    await expect(page.locator('head link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+    for (const path of ['/og.png', '/favicon.svg']) {
+      const res = await request.get(path);
+      expect(res.status(), path).toBe(200);
+    }
+    expect((await request.get('/og.png')).headers()['content-type']).toContain('image/png');
+  });
+});
+
+test.describe('accessibility (axe)', () => {
+  const serious = (violations: Awaited<ReturnType<AxeBuilder['analyze']>>['violations']) =>
+    violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+
+  async function scan(page: Page, label: string) {
+    const { violations } = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice'])
+      .analyze();
+    for (const v of violations) {
+      console.log(`axe[${label}] ${v.impact} ${v.id}: ${v.help} (${v.nodes.length} nodes)`);
+    }
+    expect(serious(violations), `axe ${label}`).toEqual([]);
+  }
+
+  test('boot terminal', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('region', { name: 'Secure terminal' })).toBeVisible();
+    await scan(page, 'boot');
+  });
+
+  test('dossier, English', async ({ page }) => {
+    await enterDossier(page);
+    await revealAll(page);
+    await scan(page, 'dossier-en');
+  });
+
+  test('dossier, Indonesian', async ({ page }) => {
+    await enterDossier(page);
+    await page.getByRole('button', { name: 'ID', exact: true }).click();
+    await revealAll(page);
+    await scan(page, 'dossier-id');
+  });
+
+  test('open case file', async ({ page }) => {
+    await enterDossier(page);
+    await reveal(page, 'operations');
+    await page.getByRole('button', { name: /HIVEMIND/ }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.waitForTimeout(700);
+    await scan(page, 'casefile');
+  });
+});
