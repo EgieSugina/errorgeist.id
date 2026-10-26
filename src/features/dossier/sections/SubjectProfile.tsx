@@ -100,6 +100,8 @@ const styles = stylex.create({
     letterSpacing: '0.03em',
     textTransform: 'uppercase',
     color: colors.ink,
+    // Focused by script after the boot transition (tabIndex -1), never by the visitor.
+    outline: 'none',
   },
   role: {
     margin: '0 0 18px',
@@ -203,7 +205,7 @@ export function SubjectProfile() {
 
           <div {...stylex.props(styles.ident)}>
             <p {...stylex.props(styles.subjectLabel)}>{t(ui.profile.subject)}</p>
-            <h1 id="profile-name" {...stylex.props(styles.name)}>
+            <h1 id="profile-name" tabIndex={-1} {...stylex.props(styles.name)}>
               {profile.name}
             </h1>
             <p {...stylex.props(styles.role)}>{t(profile.role)}</p>

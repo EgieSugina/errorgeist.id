@@ -403,7 +403,7 @@ test.describe('meta', () => {
     expect(await meta('property="og:image"')).toBe('https://errorgeist.id/og.png');
     expect(await meta('property="og:url"')).toBe('https://errorgeist.id/');
     expect(await meta('name="twitter:card"')).toBe('summary_large_image');
-    expect(await meta('name="theme-color"')).toBe('#0b0907');
+    expect(await meta('name="theme-color"')).toBe('#0b0d0c');
     await expect(page.locator('head link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
     for (const path of ['/og.png', '/favicon.svg']) {
       const res = await request.get(path);

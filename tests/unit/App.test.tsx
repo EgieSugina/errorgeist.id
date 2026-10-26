@@ -234,4 +234,30 @@ describe('App phase machine', () => {
     expect(container.querySelector('[data-fx^="crt"]')).not.toBeInTheDocument();
     expect(container.querySelector('[data-fx="grain"]')).toBeInTheDocument();
   });
+
+  it('moves focus to the dossier heading, without scrolling, after the transition', async () => {
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    render(<App />);
+    await skipAndSettle();
+    const heading = dossierHeading()!;
+    expect(document.activeElement).toBe(heading);
+    const call = focus.mock.contexts.findIndex((el) => el === heading);
+    expect(call).toBeGreaterThanOrEqual(0);
+    expect(focus.mock.calls[call][0]).toEqual({ preventScroll: true });
+  });
+
+  it('moves focus to the dossier heading after a replay', async () => {
+    window.sessionStorage.setItem('egs.bootSeen', '1');
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /replay boot/i }));
+    await skipAndSettle();
+    expect(document.activeElement).toBe(dossierHeading());
+  });
+
+  it('leaves focus alone on a direct dossier load', () => {
+    window.sessionStorage.setItem('egs.bootSeen', '1');
+    render(<App />);
+    expect(dossierHeading()).toBeInTheDocument();
+    expect(document.activeElement).toBe(document.body);
+  });
 });

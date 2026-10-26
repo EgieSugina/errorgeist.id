@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { colors } from '../../tokens/colors.stylex';
 import { fonts } from '../../tokens/fonts.stylex';
@@ -93,8 +94,23 @@ const styles = stylex.create({
   },
 });
 
-export function DossierPage({ onReplayBoot }: { onReplayBoot: () => void }) {
+type Props = {
+  onReplayBoot: () => void;
+  /** Move focus to the subject's name (without scrolling) when the page mounts. */
+  focusOnMount?: boolean;
+};
+
+export function DossierPage({ onReplayBoot, focusOnMount = false }: Props) {
   const { t } = useLang();
+  const mainRef = useRef<HTMLElement>(null);
+  const focusOnMountRef = useRef(focusOnMount);
+
+  // Mount only: after the boot terminal unmounts, focus would otherwise drop to <body>.
+  useEffect(() => {
+    if (!focusOnMountRef.current) return;
+    mainRef.current?.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
+  }, []);
+
   return (
     <div {...stylex.props(styles.page)}>
       <header {...stylex.props(styles.header)}>
@@ -106,7 +122,7 @@ export function DossierPage({ onReplayBoot }: { onReplayBoot: () => void }) {
         </div>
       </header>
 
-      <main {...stylex.props(styles.main)}>
+      <main ref={mainRef} {...stylex.props(styles.main)}>
         <SubjectProfile />
         <ServiceRecord />
         <Operations />

@@ -3,6 +3,8 @@ import * as stylex from '@stylexjs/stylex';
 import { motion, useReducedMotion } from 'motion/react';
 import { colors } from '../../../tokens/colors.stylex';
 import { fonts } from '../../../tokens/fonts.stylex';
+import { useLang } from '../../../i18n/LangProvider';
+import { ui } from '../../../content/ui';
 
 const styles = stylex.create({
   // Outer box carries the layout, focus and tooltip; the inner bar is what animates,
@@ -46,8 +48,13 @@ const styles = stylex.create({
   },
 });
 
-/** An inline black censor bar. Takes no children: redacted text never exists in source. */
-export function Redacted({ chars }: { chars: number }) {
+/**
+ * An inline black censor bar. Takes no children: redacted text never exists in source.
+ * `focusable={false}` keeps it out of the tab order (for long runs of identical bars);
+ * the hover tooltip still works.
+ */
+export function Redacted({ chars, focusable = true }: { chars: number; focusable?: boolean }) {
+  const { t } = useLang();
   const reduce = useReducedMotion();
   const [shown, setShown] = useState(false);
   const canObserve = typeof IntersectionObserver !== 'undefined';
@@ -69,8 +76,8 @@ export function Redacted({ chars }: { chars: number }) {
   return (
     <span
       role="img"
-      aria-label="redacted"
-      tabIndex={0}
+      aria-label={t(ui.redaction.label)}
+      tabIndex={focusable ? 0 : undefined}
       style={{ width: `${chars}ch` }}
       onMouseEnter={() => setShown(true)}
       onMouseLeave={() => setShown(false)}

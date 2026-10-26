@@ -1,6 +1,6 @@
 # errorgeist.id
 
-Portfolio of Egie Sugina, presented as a "Top Secret Dossier". Live at https://errorgeist.id/.
+Portfolio of Egie Sugina, presented as a "Top Secret Dossier". Deployed to https://errorgeist.id/ (once the Vercel project and domain are configured).
 
 A static single-page site built with React 19, StyleX, motion and three.js on Vite. No backend.
 
@@ -14,14 +14,19 @@ A static single-page site built with React 19, StyleX, motion and three.js on Vi
 | Command          | What it does                                             |
 | ---------------- | -------------------------------------------------------- |
 | `pnpm dev`       | Start the Vite dev server                                |
-| `pnpm test`      | Run the unit tests (Vitest)                              |
+| `pnpm test`      | Run the unit tests (Vitest); needs the leak blocklist    |
 | `pnpm typecheck` | Type-check the project (`tsc --noEmit`)                  |
 | `pnpm build`     | Type-check, build to `dist/`, then run the leak check    |
 | `pnpm e2e`       | Run the Playwright end-to-end tests against `dist/`      |
+| `pnpm leak:tree` | Scan tracked files, their paths and unpushed commit messages for blocklisted terms |
 
 ## Leak check
 
-`pnpm build` ends with a fail-closed scan of `dist/` against a private blocklist of terms that must never ship. The blocklist is kept out of git. It is read from the git-ignored `.leak-blocklist` file or, when set, from the `LEAK_BLOCKLIST_TERMS` environment variable (one term per line or comma-separated). The build fails on any match, on any source map, and if the blocklist is missing or empty.
+`pnpm build` ends with a fail-closed scan of `dist/` against a private blocklist of terms that must never ship. The blocklist is kept out of git. It is read from the git-ignored `.leak-blocklist` file or, when set, from the `LEAK_BLOCKLIST_TERMS` environment variable (one term per line or comma-separated). The build fails on any match, on any source map, and if the blocklist is missing or empty. File paths count as matches too.
+
+`pnpm test` needs the same blocklist (the file or `LEAK_BLOCKLIST_TERMS`): the content tests check every bilingual string against it and fail, rather than skip, when neither is present.
+
+`pnpm leak:tree` applies the same check to the source tree: the path and contents of every tracked file, plus the commit messages not yet pushed (all of them when the branch has no upstream). `pnpm install` sets `core.hooksPath` to `.githooks`, whose `pre-push` hook runs this check and blocks the push on any hit.
 
 ## Deploy to Vercel
 

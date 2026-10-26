@@ -48,21 +48,21 @@ afterEach(() => {
 
 describe('Redacted', () => {
   it('is an empty labelled bar; the tooltip is not in the DOM at rest', () => {
-    render(<Redacted chars={8} />);
+    render(<LangProvider><Redacted chars={8} /></LangProvider>);
     const bar = screen.getByRole('img', { name: 'redacted' });
     expect(bar.textContent).toBe('');
     expect(screen.queryByText('[CLASSIFIED]')).toBeNull();
   });
 
   it('is sized in ch units', () => {
-    render(<Redacted chars={8} />);
+    render(<LangProvider><Redacted chars={8} /></LangProvider>);
     // jsdom resolves ch to px in computed style; assert on the authored value instead.
     expect(screen.getByRole('img', { name: 'redacted' }).getAttribute('style')).toContain('8ch');
   });
 
   it('shows [CLASSIFIED] on hover and hides it on leave', async () => {
     const user = userEvent.setup();
-    render(<Redacted chars={8} />);
+    render(<LangProvider><Redacted chars={8} /></LangProvider>);
     const bar = screen.getByRole('img', { name: 'redacted' });
     await user.hover(bar);
     expect(screen.getByText('[CLASSIFIED]')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('Redacted', () => {
 
   it('is keyboard focusable and shows [CLASSIFIED] on focus', async () => {
     const user = userEvent.setup();
-    render(<Redacted chars={8} />);
+    render(<LangProvider><Redacted chars={8} /></LangProvider>);
     const bar = screen.getByRole('img', { name: 'redacted' });
     expect(bar).toHaveAttribute('tabindex', '0');
     await user.tab();
@@ -83,15 +83,45 @@ describe('Redacted', () => {
   });
 
   it('rejects children at the type level', () => {
-    // @ts-expect-error Redacted takes no children: redacted text is never in source
-    render(<Redacted chars={3}>secret</Redacted>);
+    render(
+      <LangProvider>
+        {/* @ts-expect-error Redacted takes no children: redacted text is never in source */}
+        <Redacted chars={3}>secret</Redacted>
+      </LangProvider>,
+    );
     expect(screen.queryByText('secret')).toBeNull();
+  });
+
+  it('can opt out of the tab order and still show [CLASSIFIED] on hover', async () => {
+    const user = userEvent.setup();
+    render(
+      <LangProvider>
+        <Redacted chars={6} focusable={false} />
+      </LangProvider>,
+    );
+    const bar = screen.getByRole('img', { name: 'redacted' });
+    expect(bar).not.toHaveAttribute('tabindex');
+    await user.tab();
+    expect(bar).not.toHaveFocus();
+    await user.hover(bar);
+    expect(screen.getByText('[CLASSIFIED]')).toBeInTheDocument();
+  });
+
+  it('labels the bar in the current language', () => {
+    window.localStorage.setItem('egs.lang', 'id');
+    render(
+      <LangProvider>
+        <Redacted chars={4} />
+      </LangProvider>,
+    );
+    expect(screen.getByRole('img', { name: 'disensor' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'redacted' })).toBeNull();
   });
 
   it('still renders without IntersectionObserver', () => {
     // @ts-expect-error simulate an environment without IO
     delete globalThis.IntersectionObserver;
-    render(<Redacted chars={4} />);
+    render(<LangProvider><Redacted chars={4} /></LangProvider>);
     expect(screen.getByRole('img', { name: 'redacted' })).toBeInTheDocument();
   });
 });

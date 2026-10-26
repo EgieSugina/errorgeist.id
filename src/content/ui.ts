@@ -11,6 +11,10 @@ export const sections: { id: string; label: L10n }[] = [
 ];
 
 export const ui = {
+  redaction: {
+    /** Accessible name of a redaction bar. */
+    label: { en: 'redacted', id: 'disensor' },
+  },
   profile: {
     subject: { en: 'Subject', id: 'Subjek' },
     photoAlt: { en: 'Subject photo', id: 'Foto subjek' },

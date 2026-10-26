@@ -38,6 +38,9 @@ function initialPhase(): Phase {
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>(initialPhase);
+  // Set once the dossier is reached through the transition (first visit or replay), so focus
+  // follows the visitor into it. A direct dossier load leaves focus where the browser put it.
+  const [focusDossier, setFocusDossier] = useState(false);
 
   // Functional updates make each hop fire at most once, however many times
   // a child reports it (rapid keys, a skip racing the natural end).
@@ -48,6 +51,7 @@ export default function App() {
   const finishTransition = useCallback(() => {
     writeStore('session', BOOT_SEEN_KEY, '1');
     setPhase((p) => (p === 'transition' ? 'dossier' : p));
+    setFocusDossier(true);
   }, []);
 
   const replayBoot = useCallback(() => {
@@ -81,7 +85,7 @@ export default function App() {
           <FxBoundary fallback={null}>
             <GrainBackdrop />
           </FxBoundary>
-          <DossierPage onReplayBoot={replayBoot} />
+          <DossierPage onReplayBoot={replayBoot} focusOnMount={focusDossier} />
         </>
       )}
     </LangProvider>

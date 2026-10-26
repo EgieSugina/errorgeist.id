@@ -267,7 +267,9 @@ describe('ArchiveList', () => {
       expect(items).toHaveLength(g.items.length);
       items.forEach((li, i) => {
         expect(li.textContent).toMatch(/^OP\./);
-        expect(within(li).getByRole('img', { name: 'redacted' })).toBeInTheDocument();
+        const bar = within(li).getByRole('img', { name: 'redacted' });
+        // Dozens of identical bars would be dozens of empty tab stops.
+        expect(bar).not.toHaveAttribute('tabindex');
         expect(li.textContent).toContain((g.items[i] as { en: string }).en);
       });
     }

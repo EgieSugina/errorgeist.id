@@ -142,7 +142,7 @@ export function ArchiveList() {
                   : g.items.map((item) => (
                       <li key={item.en} {...stylex.props(styles.item)}>
                         <span {...stylex.props(styles.prefix)}>
-                          OP. <Redacted chars={6} />
+                          OP. <Redacted chars={6} focusable={false} />
                         </span>
                         <span {...stylex.props(styles.desc)}>
                           <span aria-hidden="true">— </span>
