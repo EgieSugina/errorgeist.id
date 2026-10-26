@@ -42,3 +42,23 @@ describe('vercel.json', () => {
     expect(config.rewrites).toBeUndefined();
   });
 });
+
+describe('README deploy instructions', () => {
+  const readme = readFileSync(resolve(__dirname, '../../README.md'), 'utf8');
+
+  it('tells the reader to set the corepack and blocklist env vars', () => {
+    expect(readme).toContain('ENABLE_EXPERIMENTAL_COREPACK=1');
+    expect(readme).toContain('LEAK_BLOCKLIST_TERMS');
+  });
+
+  it('gives a command that prints only the terms line, and warns it is private', () => {
+    expect(readme).toContain('node scripts/print-blocklist-env.mjs');
+    expect(readme).toMatch(/private/i);
+  });
+
+  it('lists local prerequisites', () => {
+    expect(readme).toMatch(/Node(\.js)? 20/);
+    expect(readme).toContain('corepack enable');
+  });
+});
+
