@@ -1,0 +1,14 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import stylex from '@stylexjs/unplugin';
+
+export default defineConfig({
+  plugins: [
+    stylex.vite({
+      useCSSLayers: true,
+      unstable_moduleResolution: { type: 'commonJS', rootDir: process.cwd() },
+    }),
+    react(),
+  ],
+  build: { sourcemap: false },
+});
