@@ -1,11 +1,13 @@
-import { render, screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, expect, it } from 'vitest';
 import App from '../../src/App';
 
-it('renders the placeholder with StyleX-compiled styles', () => {
+afterEach(cleanup);
+
+it('renders the dossier with StyleX-compiled styles', () => {
   render(<App />);
-  const el = screen.getByText('dossier');
-  expect(el).toBeInTheDocument();
+  const name = screen.getByRole('heading', { level: 1, name: 'Egie Sugina' });
+  expect(name).toBeInTheDocument();
   // stylex.props only yields className when the compiler ran
-  expect(el.className).not.toBe('');
+  expect(name.className).not.toBe('');
 });
