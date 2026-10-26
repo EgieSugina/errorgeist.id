@@ -16,7 +16,7 @@ export default defineConfig({
     sourcemap: false,
     rolldownOptions: {
       output: {
-        // three.js gets its own named chunk; only the lazy fx modules import it.
+        // three.js gets its own named chunk; only the lazily loaded WebGL renderers import it.
         codeSplitting: { groups: [{ name: 'three', test: /[\\/]node_modules[\\/]three[\\/]/ }] },
       },
     },

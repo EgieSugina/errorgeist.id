@@ -1,6 +1,32 @@
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../../src/App';
+
+// `webgl.forceAvailable` pretends the WebGL probe passed (jsdom has none).
+const webgl = vi.hoisted(() => ({ forceAvailable: false }));
+vi.mock('../../src/lib/webgl', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/lib/webgl')>();
+  return { ...actual, hasWebGL: () => webgl.forceAvailable || actual.hasWebGL() };
+});
+
+// Counts requests for the WebGL renderer chunks (the only modules that pull in three.js).
+// They resolve to inert renderers so no real three.js runs here.
+const loads = vi.hoisted(() => ({ crt: 0, grain: 0 }));
+vi.mock('../../src/features/fx/loaders', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/features/fx/loaders')>();
+  const inert = () => ({ stop() {} });
+  return {
+    ...actual,
+    loadCrtRenderer: () => {
+      loads.crt++;
+      return Promise.resolve({ startCrtRenderer: inert });
+    },
+    loadGrainRenderer: () => {
+      loads.grain++;
+      return Promise.resolve({ startGrainRenderer: inert });
+    },
+  };
+});
 
 const originalMatchMedia = window.matchMedia;
 const originalIO = globalThis.IntersectionObserver;
@@ -31,7 +57,7 @@ const dossierHeading = () => screen.queryByRole('heading', { level: 1, name: 'Eg
 
 /**
  * React batches state inside one act(), so step the clock in small slices like a real browser.
- * Async act also flushes microtasks, which lets the React.lazy fx chunks resolve.
+ * Async act also flushes microtasks, which lets the lazily loaded fx renderers resolve.
  */
 async function advance(ms: number) {
   for (let t = 0; t < ms; t += 50) {
@@ -49,16 +75,13 @@ async function skipAndSettle() {
   await advance(1500);
 }
 
-// Warm the lazy fx modules so React.lazy resolves within a microtask flush.
-beforeAll(async () => {
-  await import('../../src/features/fx/CrtTransition');
-  await import('../../src/features/fx/GrainBackdrop');
-});
-
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
   window.localStorage.clear();
   window.sessionStorage.clear();
+  webgl.forceAvailable = false;
+  loads.crt = 0;
+  loads.grain = 0;
   globalThis.IntersectionObserver = MockIO as unknown as typeof IntersectionObserver;
   setReducedMotion(false);
 });
@@ -172,5 +195,43 @@ describe('App phase machine', () => {
     render(<App />);
     const name = screen.getByRole('heading', { level: 1, name: 'Egie Sugina' });
     expect(name.className).not.toBe('');
+  });
+
+  it('without WebGL never requests a WebGL renderer chunk, through boot, transition and dossier', async () => {
+    const { container } = render(<App />);
+    await skipAndSettle();
+    expect(container.querySelector('#profile')).toBeInTheDocument();
+    expect(loads).toEqual({ crt: 0, grain: 0 });
+  });
+
+  it('under reduced motion never requests a WebGL renderer chunk, even with WebGL and a replay', async () => {
+    setReducedMotion(true);
+    webgl.forceAvailable = true;
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: /replay boot/i }));
+    act(() => {
+      fireEvent.keyDown(window, { key: 'x' });
+    });
+    await advance(600);
+    expect(dossierHeading()).toBeInTheDocument();
+    expect(loads).toEqual({ crt: 0, grain: 0 });
+  });
+
+  it('with WebGL fetches both renderer chunks while the boot terminal types', async () => {
+    webgl.forceAvailable = true;
+    render(<App />);
+    await advance(50);
+    expect(screen.getByText(/SECURE TERMINAL/)).toBeInTheDocument();
+    expect(loads.crt).toBeGreaterThanOrEqual(1);
+    expect(loads.grain).toBeGreaterThanOrEqual(1);
+  });
+
+  it('with WebGL still reaches the dossier exactly once', async () => {
+    webgl.forceAvailable = true;
+    const { container } = render(<App />);
+    await skipAndSettle();
+    expect(container.querySelector('#profile')).toBeInTheDocument();
+    expect(container.querySelector('[data-fx^="crt"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-fx="grain"]')).toBeInTheDocument();
   });
 });

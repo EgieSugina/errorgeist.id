@@ -169,13 +169,7 @@ test.describe('boot and phases', () => {
   });
 
   test('dossier appears without WebGL', async ({ page }) => {
-    await page.addInitScript(() => {
-      const real = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...rest: unknown[]) {
-        if (/webgl/i.test(type)) return null;
-        return (real as (...a: unknown[]) => unknown).call(this, type, ...rest);
-      } as typeof real;
-    });
+    await disableWebGL(page);
     await enterDossier(page);
     await expect(page.locator('#profile')).toBeVisible();
   });
@@ -192,6 +186,74 @@ test.describe('boot and phases', () => {
     test('a case file still opens and closes', async ({ page }) => {
       await page.goto('/');
       await openCloseCaseFile(page);
+    });
+  });
+});
+
+/** Every request for three.js or a WebGL renderer chunk made by `page` from now on. */
+function watchWebglChunks(page: Page) {
+  const urls: string[] = [];
+  page.on('request', (r) => {
+    if (/\/assets\/(three|crtRenderer|grainRenderer|fullscreenQuad)-[^/]*\.js/.test(r.url())) urls.push(r.url());
+  });
+  return urls;
+}
+
+/** Block WebGL context creation (canvas 2D still works). */
+async function disableWebGL(page: Page) {
+  await page.addInitScript(() => {
+    const real = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...rest: unknown[]) {
+      if (/webgl/i.test(type)) return null;
+      return (real as (...a: unknown[]) => unknown).call(this, type, ...rest);
+    } as typeof real;
+  });
+}
+
+test.describe('three.js loads only when WebGL effects run', () => {
+  test('when the WebGL probe passes, three.js and both renderers are fetched (control)', async ({ page, errors }) => {
+    // Headless Chromium on the test runner has no WebGL at all, so report it to the probe only
+    // (a detached canvas). Each renderer's own canvas is attached and still gets no context,
+    // so both fall back as on a real device whose GPU fails late; three.js logs that.
+    await page.addInitScript(() => {
+      const real = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, type: string, ...rest: unknown[]) {
+        if (/webgl/i.test(type) && !this.isConnected) return { getExtension: () => null };
+        return (real as (...a: unknown[]) => unknown).call(this, type, ...rest);
+      } as typeof real;
+    });
+    const urls = watchWebglChunks(page);
+    await enterDossier(page);
+    await page.waitForLoadState('networkidle');
+    for (const chunk of ['three', 'crtRenderer', 'grainRenderer']) {
+      expect(urls.some((u) => u.includes(`/assets/${chunk}-`)), `${chunk} chunk requested`).toBe(true);
+    }
+    // The late context failure above is expected here; anything else still fails the test.
+    const expected = /THREE\.WebGLRenderer: (A WebGL context could not be created|Error creating WebGL context)/;
+    for (let i = errors.length - 1; i >= 0; i--) if (expected.test(errors[i])) errors.splice(i, 1);
+  });
+
+  test('without WebGL, no three.js or renderer chunk is requested', async ({ page }) => {
+    await disableWebGL(page);
+    const urls = watchWebglChunks(page);
+    await enterDossier(page);
+    await page.waitForLoadState('networkidle');
+    expect(urls).toEqual([]);
+  });
+
+  test.describe('reduced motion', () => {
+    test.use({ reducedMotion: 'reduce' });
+
+    test('no three.js or renderer chunk is requested, even through a boot replay', async ({ page }) => {
+      const urls = watchWebglChunks(page);
+      await page.goto('/');
+      await expect(page.locator('#profile')).toBeVisible();
+      await page.getByRole('button', { name: /replay boot/i }).click();
+      await expect(page.getByRole('region', { name: 'Secure terminal' })).toBeVisible();
+      await page.keyboard.press('Space');
+      await expect(page.locator('#profile')).toBeVisible();
+      await page.waitForLoadState('networkidle');
+      expect(urls).toEqual([]);
     });
   });
 });
