@@ -22,7 +22,7 @@ const ANGLES: Record<StampKind, number> = {
 const styles = stylex.create({
   stamp: {
     display: 'inline-block',
-    padding: '2px 12px 1px',
+    padding: '3px 12px 2px',
     fontFamily: fonts.stamp,
     fontWeight: 700,
     fontSize: '1.5rem',
@@ -32,10 +32,13 @@ const styles = stylex.create({
     whiteSpace: 'nowrap',
     userSelect: 'none',
     color: colors.stamp,
-    border: `3px solid ${colors.stamp}`,
+    borderWidth: '3px',
+    borderStyle: 'solid',
+    borderColor: colors.stamp,
     borderRadius: 3,
-    // Inner hairline gives the classic double-ruled stamp border. Normal blend: red ink on dark paper.
-    boxShadow: `inset 0 0 0 2px transparent, inset 0 0 0 3px ${colors.stamp}`,
+    // Inner hairline (1px gap inside the border) gives the classic double-ruled stamp border.
+    outline: `1px solid ${colors.stamp}`,
+    outlineOffset: -5,
     // Worn-ink speckle: an alpha mask of tiled turbulence punches tiny gaps in the print.
     maskImage:
       "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 9 0 0 0 -3.1'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E\")",

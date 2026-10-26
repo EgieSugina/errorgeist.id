@@ -39,7 +39,9 @@ const styles = stylex.create({
     letterSpacing: '0.08em',
     color: colors.phosphor,
     backgroundColor: colors.desk,
-    border: `1px solid ${colors.phosphorDim}`,
+    borderWidth: '1px',
+    borderStyle: 'solid',
+    borderColor: colors.phosphorDim,
     textShadow: `0 0 6px ${colors.phosphor}`,
   },
 });

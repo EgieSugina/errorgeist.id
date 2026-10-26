@@ -18,8 +18,9 @@ const styles = stylex.create({
   sep: { color: colors.phosphorDim },
   btn: {
     appearance: 'none',
-    background: 'transparent',
-    border: 'none',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderStyle: 'none',
     padding: '4px 6px',
     margin: 0,
     font: 'inherit',
