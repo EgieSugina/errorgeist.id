@@ -251,7 +251,7 @@ export const operations: Operation[] = [
         id: 'Sekitar sepuluh ribu baris Go, dilengkapi tes.',
       },
     ],
-    links: [],
+    links: [{ label: 'GitHub', href: 'https://github.com/EgieSugina/S.P.E.C.T.R.E' }],
   },
   {
     id: 'tsukimi',
@@ -283,7 +283,112 @@ export const operations: Operation[] = [
       },
       { en: 'SEO optimizer.', id: 'SEO optimizer.' },
     ],
+    links: [{ label: 'GitHub', href: 'https://github.com/EgieSugina/tsukimi.my' }],
+  },
+  {
+    id: 'lucy',
+    codename: 'LUCY',
+    clearance: 'declassified',
+    client: null,
+    kind: {
+      en: 'Discord voice assistant bot',
+      id: 'Bot asisten suara Discord',
+    },
+    summary: {
+      en: 'A personal project: a Discord bot persona for Indonesian-speaking servers that answers questions out loud in voice channels while the music keeps playing.',
+      id: 'Projek pribadi: persona bot Discord untuk server berbahasa Indonesia yang menjawab pertanyaan dengan suara di voice channel sementara musik tetap berputar.',
+    },
+    role: { en: 'Sole developer', id: 'Developer tunggal' },
+    stack: [
+      'Node.js 20', 'discord.js', '@discordjs/voice', 'Opus', 'prism-media', 'Groq', 'Whisper',
+      'Fish Audio', 'sherpa-onnx', 'yt-dlp', 'ffmpeg', 'Docker', 'k3s',
+    ],
+    highlights: [
+      {
+        en: 'Answers /ask questions in the voice channel while YouTube music plays, ducking the music as she speaks.',
+        id: 'Menjawab pertanyaan /ask di voice channel sambil memutar musik YouTube, volume musik diturunkan saat dia bicara.',
+      },
+      {
+        en: 'Custom PCM mixer that blends speech and music into a single Opus stream.',
+        id: 'Mixer PCM buatan sendiri yang menyatukan suara dan musik dalam satu stream Opus.',
+      },
+      {
+        en: 'Multi-model LLM fallback chain, tuned with measured latencies.',
+        id: 'Rantai fallback LLM multi-model, disetel dari latensi yang diukur.',
+      },
+      {
+        en: 'Automatic web search for time-sensitive questions.',
+        id: 'Pencarian web otomatis untuk pertanyaan yang sensitif waktu.',
+      },
+      {
+        en: 'Per-server conversation memory, with /forget to clear it.',
+        id: 'Memori percakapan per server, bisa dihapus dengan /forget.',
+      },
+      {
+        en: 'Emotion-tagged speech and a wake-word listener.',
+        id: 'Suara berlabel emosi dan pendeteksi wake-word.',
+      },
+      {
+        en: 'Playlists, autoplay, loop, shuffle and auto-leave, covered by unit tests.',
+        id: 'Playlist, autoplay, loop, shuffle, dan auto-leave, dilengkapi unit test.',
+      },
+      {
+        en: 'Containerized and deployed on k3s.',
+        id: 'Dikemas dalam container dan dijalankan di k3s.',
+      },
+    ],
     links: [],
+  },
+  {
+    id: 'homechef',
+    codename: 'HOME CHEF AI',
+    clearance: 'declassified',
+    client: null,
+    kind: {
+      en: 'AI cooking-assistant chat web app, with a fine-tuned model',
+      id: 'Aplikasi web chat asisten memasak AI, dengan model hasil fine-tuning',
+    },
+    summary: {
+      en: 'A personal project: a chat-style web app where users talk to a cooking assistant, backed by a small language model fine-tuned on Indonesian recipes.',
+      id: 'Projek pribadi: aplikasi web bergaya chat untuk berbincang dengan asisten memasak, ditenagai model bahasa kecil yang di-fine-tune pada resep Indonesia.',
+    },
+    role: { en: 'Sole developer', id: 'Developer tunggal' },
+    stack: [
+      'Next.js 15', 'React 19', 'TypeScript', 'Tailwind CSS', 'shadcn/ui', 'Radix UI', 'NextAuth', 'Prisma',
+      'SQLite', 'zod', 'Nodemailer', 'Qwen2.5', 'LoRA', 'PEFT', 'PyTorch', 'FastAPI',
+    ],
+    highlights: [
+      {
+        en: 'Full auth flow: credentials and Google sign-in, email OTP verification, password reset and change.',
+        id: 'Alur autentikasi lengkap: kredensial dan login Google, verifikasi OTP email, reset dan ganti password.',
+      },
+      {
+        en: 'Chat channels with full CRUD and a public share link for each chat.',
+        id: 'Channel chat dengan CRUD lengkap dan tautan berbagi publik untuk tiap chat.',
+      },
+      {
+        en: 'Route-protection middleware.',
+        id: 'Middleware proteksi rute.',
+      },
+      {
+        en: 'Qwen2.5-0.5B fine-tuned with LoRA into an Indonesian-cuisine chef model.',
+        id: 'Qwen2.5-0.5B di-fine-tune dengan LoRA menjadi model chef masakan Indonesia.',
+      },
+      {
+        en: 'Recipes, cooking Q&A and ingredient-based recommendations.',
+        id: 'Resep, tanya jawab memasak, dan rekomendasi berdasarkan bahan.',
+      },
+      {
+        en: 'Model served behind a FastAPI inference server.',
+        id: 'Model dilayani lewat server inferensi FastAPI.',
+      },
+    ],
+    links: [
+      {
+        label: 'GitHub — model training',
+        href: 'https://github.com/EgieSugina/Training-Model-Chef-AI-Indonesia',
+      },
+    ],
   },
 ];
 

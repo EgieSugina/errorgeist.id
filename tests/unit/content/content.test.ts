@@ -47,14 +47,34 @@ describe('bilingual completeness', () => {
 });
 
 describe('operations', () => {
-  it('has 8 featured operations', () => {
-    expect(operations).toHaveLength(8);
+  it('has 10 featured operations', () => {
+    expect(operations).toHaveLength(10);
   });
 
-  it('has exactly two declassified ops: spectre and tsukimi, with no client', () => {
+  it('has exactly four declassified ops, in order, with no client', () => {
     const declassified = operations.filter((o) => o.clearance === 'declassified');
-    expect(declassified.map((o) => o.id).sort()).toEqual(['spectre', 'tsukimi']);
+    expect(declassified.map((o) => o.id)).toEqual(['spectre', 'tsukimi', 'lucy', 'homechef']);
+    expect(operations.slice(6).map((o) => o.id)).toEqual(['spectre', 'tsukimi', 'lucy', 'homechef']);
     for (const o of declassified) expect(o.client).toBeNull();
+  });
+
+  it('declassified ops carry exactly the confirmed public repo links', () => {
+    const byId = (id: string) => operations.find((o) => o.id === id)!;
+    expect(byId('spectre').links).toEqual([
+      { label: 'GitHub', href: 'https://github.com/EgieSugina/S.P.E.C.T.R.E' },
+    ]);
+    expect(byId('tsukimi').links).toEqual([
+      { label: 'GitHub', href: 'https://github.com/EgieSugina/tsukimi.my' },
+    ]);
+    expect(byId('lucy').links).toHaveLength(0);
+    expect(byId('homechef').links).toEqual([
+      {
+        label: 'GitHub — model training',
+        href: 'https://github.com/EgieSugina/Training-Model-Chef-AI-Indonesia',
+      },
+    ]);
+    expect(byId('lucy').codename).toBe('LUCY');
+    expect(byId('homechef').codename).toBe('HOME CHEF AI');
   });
 
   it('classified ops are TELKOMSEL and carry no links', () => {

@@ -54,15 +54,25 @@ function cardButton(codename: string) {
 }
 
 describe('Operations cards', () => {
-  it('renders 8 cards: 6 CLASSIFIED and 2 DECLASSIFIED', () => {
+  it('renders 10 cards: 6 CLASSIFIED and 4 DECLASSIFIED', () => {
     renderEn(<Operations />);
     const cards = screen.getAllByRole('article');
-    expect(cards).toHaveLength(8);
+    expect(cards).toHaveLength(10);
     const stamps = cards.map((c) =>
       within(c).queryByText('DECLASSIFIED') ? 'declassified' : within(c).queryByText('CLASSIFIED') ? 'classified' : null,
     );
     expect(stamps.filter((s) => s === 'classified')).toHaveLength(6);
-    expect(stamps.filter((s) => s === 'declassified')).toHaveLength(2);
+    expect(stamps.filter((s) => s === 'declassified')).toHaveLength(4);
+  });
+
+  it('LUCY and HOME CHEF AI headings are fully named, with no redaction bar', () => {
+    renderEn(<Operations />);
+    for (const name of ['LUCY', 'HOME CHEF AI']) {
+      const card = cardButton(name).closest('article')!;
+      const heading = within(card).getByRole('heading', { level: 3 });
+      expect(heading.textContent).toContain(name);
+      expect(within(heading).queryByRole('img', { name: 'redacted' })).toBeNull();
+    }
   });
 
   it('classified cards show OPERATION + redaction, codename, client, kind and the first 4 stack chips', () => {
@@ -165,6 +175,21 @@ describe('CaseFile dialog', () => {
     for (const tech of op.stack) expect(within(dialog).getByText(tech)).toBeInTheDocument();
     for (const h of op.highlights) expect(within(dialog).getByText(h.en)).toBeInTheDocument();
     expect(dialog.querySelectorAll('a')).toHaveLength(0);
+  });
+
+  it('the shipped declassified ops render their real repo links in the dialog', () => {
+    for (const id of ['spectre', 'tsukimi', 'homechef']) {
+      const op = operations.find((o) => o.id === id)!;
+      renderEn(<CaseFile op={op} onClose={() => {}} />);
+      const dialog = screen.getByRole('dialog');
+      const anchors = dialog.querySelectorAll('a');
+      expect(anchors).toHaveLength(1);
+      expect(anchors[0]).toHaveAttribute('href', op.links[0]!.href);
+      cleanup();
+    }
+    const lucy = operations.find((o) => o.id === 'lucy')!;
+    renderEn(<CaseFile op={lucy} onClose={() => {}} />);
+    expect(screen.getByRole('dialog').querySelectorAll('a')).toHaveLength(0);
   });
 
   it('every classified dialog is link-free even if links were added to the data', () => {
