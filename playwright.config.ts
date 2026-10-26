@@ -11,9 +11,10 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: { baseURL: BASE_URL, trace: 'retain-on-failure' },
-  // Serves the production build: run `pnpm build` first.
+  // Serves the production build: run `pnpm build` first. Vite is started directly rather than
+  // through `pnpm exec`: the pnpm wrapper outlived Playwright's teardown and held the port.
   webServer: {
-    command: `pnpm exec vite preview --host 127.0.0.1 --port ${PORT} --strictPort`,
+    command: `node node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: BASE_URL,
     reuseExistingServer: false,
     timeout: 30_000,
