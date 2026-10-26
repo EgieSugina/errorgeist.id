@@ -5,12 +5,10 @@ import { useLang } from '../../i18n/LangProvider';
 import { LangToggle } from '../../i18n/LangToggle';
 import { profile } from '../../content/profile';
 import { sections, ui } from '../../content/ui';
-import { DossierSection } from './DossierSection';
-import { Paper } from './primitives/Paper';
 import { SectionTabs } from './primitives/SectionTabs';
-import { Stamp } from './primitives/Stamp';
 import { SubjectProfile } from './sections/SubjectProfile';
 import { ServiceRecord } from './sections/ServiceRecord';
+import { Operations } from './sections/Operations';
 import { Arsenal } from './sections/Arsenal';
 import { Education } from './sections/Education';
 import { SecureChannel } from './sections/SecureChannel';
@@ -57,13 +55,6 @@ const styles = stylex.create({
     marginInline: 'auto',
     padding: 'clamp(36px, 6vw, 64px) clamp(16px, 4vw, 40px) 24px',
   },
-  pending: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 20,
-  },
-  pendingText: { margin: 0, fontFamily: fonts.body, color: colors.inkDim },
   footer: {
     display: 'flex',
     flexWrap: 'wrap',
@@ -101,21 +92,6 @@ const styles = stylex.create({
   },
 });
 
-/** Stand-in for Task 6's <Operations />. */
-function OperationsPlaceholder() {
-  const { t } = useLang();
-  return (
-    <DossierSection id="operations">
-      <Paper>
-        <div {...stylex.props(styles.pending)}>
-          <Stamp kind="classified" />
-          <p {...stylex.props(styles.pendingText)}>{t(ui.operations.pending)}</p>
-        </div>
-      </Paper>
-    </DossierSection>
-  );
-}
-
 export function DossierPage({ onReplayBoot }: { onReplayBoot: () => void }) {
   const { t } = useLang();
   return (
@@ -132,7 +108,7 @@ export function DossierPage({ onReplayBoot }: { onReplayBoot: () => void }) {
       <main {...stylex.props(styles.main)}>
         <SubjectProfile />
         <ServiceRecord />
-        <OperationsPlaceholder />
+        <Operations />
         <Arsenal />
         <Education />
         <SecureChannel />

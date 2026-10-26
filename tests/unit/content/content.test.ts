@@ -7,10 +7,12 @@ import { education } from '../../../src/content/education';
 import { arsenal } from '../../../src/content/arsenal';
 import { archive, operations, operationsCount } from '../../../src/content/operations';
 import { bootLines } from '../../../src/content/boot';
+import { sections, ui } from '../../../src/content/ui';
 
 const BLOCKLIST_PATH = resolve(__dirname, '../../../.leak-blocklist');
 
-const everything = { profile, experience, education, arsenal, operations, archive };
+// Every bilingual content module, including the page chrome in content/ui.ts.
+const everything = { profile, experience, education, arsenal, operations, archive, sections, ui };
 
 /** Collect every { en, id } object reachable from a value. */
 function collectL10n(value: unknown, out: { en: unknown; id: unknown }[] = []) {
@@ -26,7 +28,12 @@ function collectL10n(value: unknown, out: { en: unknown; id: unknown }[] = []) {
 
 describe('bilingual completeness', () => {
   it('finds a meaningful number of L10n values', () => {
-    expect(collectL10n(everything).length).toBeGreaterThan(60);
+    // 120 from the data modules + 46 page-chrome strings from content/ui.ts (at time of writing).
+    expect(collectL10n(everything).length).toBeGreaterThan(150);
+  });
+
+  it('covers the page chrome in content/ui.ts', () => {
+    expect(collectL10n({ sections, ui }).length).toBeGreaterThan(40);
   });
 
   it('every L10n has non-empty en and id', () => {

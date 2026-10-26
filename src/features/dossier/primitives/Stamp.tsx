@@ -47,9 +47,17 @@ const styles = stylex.create({
     maskSize: '140px 140px',
     WebkitMaskSize: '140px 140px',
   },
+  small: {
+    padding: '2px 7px 1px',
+    fontSize: '0.95rem',
+    letterSpacing: '0.12em',
+    borderWidth: '2px',
+    outlineOffset: -4,
+  },
 });
 
-export function Stamp({ kind }: { kind: StampKind }) {
+/** `size="sm"` is a smaller stamp for case cards; the default is the full-size stamp. */
+export function Stamp({ kind, size = 'md' }: { kind: StampKind; size?: 'md' | 'sm' }) {
   const reduce = useReducedMotion();
   // motion's viewport mount calls `new IntersectionObserver` unconditionally; without it, render statically.
   const canObserve = typeof IntersectionObserver !== 'undefined';
@@ -78,7 +86,7 @@ export function Stamp({ kind }: { kind: StampKind }) {
     <motion.span
       {...(canObserve ? { viewport: { once: true, amount: 0.6 } } : {})}
       {...motionProps}
-      {...stylex.props(styles.stamp)}
+      {...stylex.props(styles.stamp, size === 'sm' && styles.small)}
     >
       {LABELS[kind]}
     </motion.span>

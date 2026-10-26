@@ -34,9 +34,39 @@ export const ui = {
     },
   },
   operations: {
-    pending: {
-      en: 'Case files are being pulled from the archive.',
-      id: 'Berkas kasus sedang diambil dari arsip.',
+    intro: {
+      en: 'Featured case files. Client work stays classified: the names are withheld, the engineering is not. Open a file for the full brief.',
+      id: 'Berkas kasus unggulan. Pekerjaan klien tetap rahasia: namanya disembunyikan, rekayasanya tidak. Buka berkas untuk laporan lengkapnya.',
+    },
+    client: { en: 'CLIENT', id: 'KLIEN' },
+    personal: { en: 'PERSONAL FILE', id: 'BERKAS PRIBADI' },
+    /** `{n}` is the number of stack items not shown on the card. */
+    more: { en: '+{n} more', id: '+{n} lagi' },
+    open: { en: 'open file', id: 'buka berkas' },
+    close: { en: 'close file', id: 'tutup berkas' },
+    caseFile: { en: 'CASE FILE', id: 'BERKAS KASUS' },
+    kind: { en: 'Type', id: 'Jenis' },
+    role: { en: 'Role', id: 'Peran' },
+    summary: { en: 'Brief', id: 'Ringkasan' },
+    stack: { en: 'Equipment', id: 'Perlengkapan' },
+    highlights: { en: 'Field notes', id: 'Catatan lapangan' },
+    links: { en: 'Links', id: 'Tautan' },
+    linksWithheld: {
+      en: 'No public links. Client property, withheld.',
+      id: 'Tanpa tautan publik. Milik klien, ditahan.',
+    },
+    linksPending: {
+      en: 'Repository and demo links not yet filed.',
+      id: 'Tautan repositori dan demo belum diarsipkan.',
+    },
+    end: { en: 'END OF CASE FILE', id: 'AKHIR BERKAS KASUS' },
+  },
+  archive: {
+    tab: { en: 'ARCHIVE', id: 'ARSIP' },
+    title: { en: 'Operations archive', id: 'Arsip operasi' },
+    intro: {
+      en: 'Smaller operations on record, grouped by family. All names withheld.',
+      id: 'Operasi lain yang tercatat, dikelompokkan per keluarga. Semua nama disembunyikan.',
     },
   },
   arsenal: {
